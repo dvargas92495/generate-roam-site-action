@@ -1,0 +1,12 @@
+{
+  "name": "generate-roam-site-action",
+  "version": "1.0.0",
+  "description": "GitHub Action for generating Static Sites from a Roam Graph",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"No test specified\""
+  },
+  "keywords": [],
+  "author": "dvargas92495 <dvargas92495@gmail.com>",
+  "license": "MIT"
+}
