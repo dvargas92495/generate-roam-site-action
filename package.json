@@ -8,5 +8,9 @@
   },
   "keywords": [],
   "author": "dvargas92495 <dvargas92495@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.2.6",
+    "@actions/github": "^4.0.0"
+  }
 }

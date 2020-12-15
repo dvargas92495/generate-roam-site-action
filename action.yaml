@@ -1,0 +1,15 @@
+name: 'Generate Roam Site'
+description: 'GitHub Action for generating Static Sites from a Roam Graph'
+inputs:
+  roam-username:
+    description: 'Your Roam Username'
+    required: true
+  roam-password:
+    description: 'Your Roam Password'
+    required: true
+  roam-graph:
+    description: 'Your Roam Graph'
+    required: true
+runs:
+  using: 'node12'
+  main: 'index.js'
