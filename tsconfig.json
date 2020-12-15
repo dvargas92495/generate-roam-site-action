@@ -5,6 +5,7 @@
     "allowJs": false,
     "lib": ["es2019", "DOM"],
     "module": "commonjs",
+    "moduleResolution": "node",
     "declaration": true,
     "outDir": "./dist",
     "strict": true,

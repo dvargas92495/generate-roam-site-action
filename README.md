@@ -19,9 +19,11 @@ A GitHub action for generating a static site from a Roam Graph.
 ## Example Usage
 
 ```yaml
-uses: actions/generate-roam-site-action@v1.0
+uses: dvargas92495/generate-roam-site-action@v1.0
 with:
     roam-username: dvargas92495@gmail.com
-    roam-password: {{ secrets.ROAM_PASSWORD }}
+    roam-password: ${{ secrets.ROAM_PASSWORD }}
     roam-graph: dvargas92495
 ```
+
+I have an [example repository](https://github.com/dvargas92495/public-garden) showcasing this action. The resulting site is reachable at https://garden.davidvargas.me.

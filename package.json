@@ -4,7 +4,7 @@
   "description": "GitHub Action for generating Static Sites from a Roam Graph",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "ncc build src/index.ts -o dist",
     "format": "prettier --write \"src/**/*.tsx\"",
     "lint": "tslint -p tsconfig.json",
     "pretest": "npm run lint",
@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@types/jest": "^26.0.19",
+    "@vercel/ncc": "^0.25.1",
     "jest": "^26.6.3",
     "prettier": "^2.2.1",
     "ts-jest": "^26.4.4",
