@@ -2,15 +2,29 @@
   "name": "generate-roam-site-action",
   "version": "1.0.0",
   "description": "GitHub Action for generating Static Sites from a Roam Graph",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "test": "echo \"No test specified\""
+    "build": "tsc",
+    "format": "prettier --write \"src/**/*.tsx\"",
+    "lint": "tslint -p tsconfig.json",
+    "pretest": "npm run lint",
+    "test": "jest --config jestconfig.json"
   },
   "keywords": [],
   "author": "dvargas92495 <dvargas92495@gmail.com>",
   "license": "MIT",
   "dependencies": {
     "@actions/core": "^1.2.6",
-    "@actions/github": "^4.0.0"
+    "@actions/github": "^4.0.0",
+    "chalk": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.19",
+    "jest": "^26.6.3",
+    "prettier": "^2.2.1",
+    "ts-jest": "^26.4.4",
+    "tslint": "^6.1.3",
+    "tslint-config-prettier": "^1.18.0",
+    "typescript": "^4.1.3"
   }
 }
