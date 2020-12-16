@@ -1,13 +1,13 @@
 name: 'Generate Roam Site'
 description: 'GitHub Action for generating Static Sites from a Roam Graph'
 inputs:
-  roam-username:
+  roam_username:
     description: 'Your Roam Username'
     required: true
-  roam-password:
+  roam_password:
     description: 'Your Roam Password'
     required: true
-  roam-graph:
+  roam_graph:
     description: 'Your Roam Graph'
     required: true
 runs:
