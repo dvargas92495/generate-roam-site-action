@@ -16,6 +16,8 @@
   "dependencies": {
     "@actions/core": "^1.2.6",
     "@actions/github": "^4.0.0",
+    "jszip": "^3.5.0",
+    "node-watch": "^0.7.1",
     "puppeteer": "^5.5.0"
   },
   "devDependencies": {

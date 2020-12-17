@@ -1,4 +1,6 @@
 import run from "./generate-site";
-import { setFailed } from "@actions/core";
+import { setFailed, info } from "@actions/core";
 
-run().catch((e) => setFailed(e.message));
+run()
+  .then(() => info("Done!"))
+  .catch((e) => setFailed(e.message));
