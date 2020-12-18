@@ -26,4 +26,17 @@ with:
     roam_graph: dvargas92495
 ```
 
+Most other configuration happens from your Roam DB, on a page called `roam/js/public-garden`. The following configuration options are supported:
+- Index - The page name that will serve as the entry point of the site.
+- Filter - A set of rules that specifies which pages to build. If a page matches any child rule, it will be built into the site. The following rules are supported:
+    - Starts With - If a page starts with the given text, it will be included in the site. Useful for namespacing, e.g. `Article/Article`
+
+Here's an example configuration, that uses the `Personal Website` page as the entry point and includes all pages that start with a `P`:
+
+- Index
+    - Personal Website
+- Filter
+    - Starts With
+        - P
+
 I have an [example repository](https://github.com/dvargas92495/public-garden) showcasing this action. The resulting site is reachable at https://garden.davidvargas.me.
