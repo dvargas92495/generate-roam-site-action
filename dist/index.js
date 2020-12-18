@@ -53550,7 +53550,7 @@ const getConfigFromPage = (page) => __awaiter(void 0, void 0, void 0, function* 
         : {};
     return Object.assign(Object.assign({}, withIndex), withFilter);
 });
-const hydrateHTML = ({ name, content }) => `<!doctype html>
+const hydrateHTML = ({ name, content, }) => `<!doctype html>
 <html>
 <head>
 <meta charset="utf-8"/>
@@ -53571,7 +53571,11 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
             core_1.info(`Hello ${roamUsername}! Fetching from ${roamGraph}...`);
             const payload = JSON.stringify(github_1.context.payload);
             core_1.info(`The event payload: ${payload}`);
-            return puppeteer_1.default.launch().then((browser) => __awaiter(void 0, void 0, void 0, function* () {
+            return puppeteer_1.default
+                .launch({
+                executablePath: "/usr/bin/google-chrome-stable",
+            })
+                .then((browser) => __awaiter(void 0, void 0, void 0, function* () {
                 const page = yield browser.newPage();
                 try {
                     const downloadPath = path_1.default.join(process.cwd(), "downloads");
@@ -53595,7 +53599,9 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                     });
                     yield page.click(`a[href="#/app/${roamGraph}"]`);
                     core_1.info("entering graph");
-                    yield page.waitForSelector("span.bp3-icon-more", { timeout: 120000 });
+                    yield page.waitForSelector("span.bp3-icon-more", {
+                        timeout: 120000,
+                    });
                     yield page.click(`span.bp3-icon-more`);
                     yield page.waitForXPath("//div[text()='Export All']", {
                         timeout: 120000,
@@ -53634,9 +53640,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                         const content = marked_1.default(pages[p]);
                         const name = p.substring(0, p.length - ".md".length);
                         const hydratedHtml = hydrateHTML({ name, content });
-                        const htmlFileName = name === config.index
-                            ? "index.html"
-                            : `${name}.html`;
+                        const htmlFileName = name === config.index ? "index.html" : `${name}.html`;
                         const newFileName = encodeURIComponent(htmlFileName.replace(/ /g, "_"));
                         fs_1.default.writeFileSync(path_1.default.join(outputPath, newFileName), hydratedHtml);
                     });
@@ -53648,7 +53652,8 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                     core_1.error(e.message);
                     return reject(e);
                 }
-            })).catch((e) => {
+            }))
+                .catch((e) => {
                 core_1.error(e.message);
                 return reject(e);
             });
