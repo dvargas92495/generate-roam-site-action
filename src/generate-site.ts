@@ -89,7 +89,7 @@ ${content}
 </body>
 </html>`;
 
-export const run = async (): Promise<{ message: string } | void> =>
+export const run = async (): Promise<void> =>
   await new Promise((resolve, reject) => {
     try {
       const roamUsername = getInput("roam_username");
@@ -190,6 +190,9 @@ export const run = async (): Promise<{ message: string } | void> =>
           error(e.message);
           return reject(e);
         }
+      }).catch((e) => {
+        error(e.message);
+        return reject(e);
       });
     } catch (error) {
       info("catching error...");

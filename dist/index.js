@@ -53648,7 +53648,10 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                     core_1.error(e.message);
                     return reject(e);
                 }
-            }));
+            })).catch((e) => {
+                core_1.error(e.message);
+                return reject(e);
+            });
         }
         catch (error) {
             core_1.info("catching error...");

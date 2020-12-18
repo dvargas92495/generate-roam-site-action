@@ -1,4 +1,2 @@
-export declare const run: () => Promise<{
-    message: string;
-} | void>;
+export declare const run: () => Promise<void>;
 export default run;
