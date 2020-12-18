@@ -1,5 +1,4 @@
 import { error, getInput, info } from "@actions/core";
-import { context } from "@actions/github";
 import puppeteer from "puppeteer";
 import path from "path";
 import watch from "node-watch";
@@ -102,9 +101,7 @@ export const run = async (): Promise<void> =>
       const roamPassword = getInput("roam_password");
       const roamGraph = getInput("roam_graph");
       info(`Hello ${roamUsername}! Fetching from ${roamGraph}...`);
-      const payload = JSON.stringify(context.payload);
-      info(`The event payload: ${payload}`);
-
+      
       return puppeteer
         .launch({
           executablePath: "/usr/bin/google-chrome-stable",
@@ -128,12 +125,12 @@ export const run = async (): Promise<void> =>
             await page.type("input[name=email]", roamUsername);
             await page.type("input[name=password]", roamPassword);
             await page.click("button.bp3-button");
-            info("Signing in");
+            info(`Signing in ${new Date().toLocaleTimeString()}`);
             await page.waitForSelector(`a[href="#/app/${roamGraph}"]`, {
               timeout: 20000,
             });
             await page.click(`a[href="#/app/${roamGraph}"]`);
-            info("entering graph");
+            info(`entering graph ${new Date().toLocaleTimeString()}`);
             await page.waitForSelector("span.bp3-icon-more", {
               timeout: 120000,
             });
