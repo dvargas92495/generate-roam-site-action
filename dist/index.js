@@ -49872,12 +49872,24 @@ const jszip_1 = __importDefault(__webpack_require__(3592));
 const marked_1 = __importDefault(__webpack_require__(4223));
 const defaultConfig = {
     index: "Website Index",
-    filter: () => true,
+    titleFilter: () => true,
+    contentFilter: () => true,
 };
-const getRuleFromNode = (n) => {
+const getTitleRuleFromNode = (n) => {
     const { text, children } = n;
     if (text.trim().toUpperCase() === "STARTS WITH" && children.length) {
-        return (s) => s.startsWith(children[0].text);
+        return (title) => title.startsWith(children[0].text);
+    }
+    else {
+        return () => true;
+    }
+};
+const getContentRuleFromNode = (n) => {
+    const { text, children } = n;
+    if (text.trim().toUpperCase() === "TAGGED WITH" && children.length) {
+        return (content) => content.includes(`#${children[0].text}`) ||
+            content.includes(`[[${children[0].text}]]`) ||
+            content.includes(`${children[0].text}::`);
     }
     else {
         return () => true;
@@ -49916,7 +49928,8 @@ const getConfigFromPage = (page) => __awaiter(void 0, void 0, void 0, function* 
         : {};
     const withFilter = filterNode && filterNode.children.length
         ? {
-            filter: (s) => filterNode.children.map(getRuleFromNode).some((r) => r(s)),
+            titleFilter: (t) => filterNode.children.map(getTitleRuleFromNode).some((r) => r(t)),
+            contentFilter: (c) => filterNode.children.map(getContentRuleFromNode).some((r) => r(c)),
         }
         : {};
     return Object.assign(Object.assign({}, withIndex), withFilter);
@@ -49941,7 +49954,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
             const roamGraph = core_1.getInput("roam_graph");
             core_1.info(`Hello ${roamUsername}! Fetching from ${roamGraph}...`);
             return puppeteer_1.default
-                .launch({
+                .launch(process.env.NODE_ENV === 'test' ? {} : {
                 executablePath: "/usr/bin/google-chrome-stable",
             })
                 .then((browser) => __awaiter(void 0, void 0, void 0, function* () {
@@ -49998,10 +50011,12 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                         : Promise.resolve({}))));
                     const pages = {};
                     yield Promise.all(Object.keys(zip.files)
-                        .filter(config.filter)
+                        .filter(config.titleFilter)
                         .map((k) => __awaiter(void 0, void 0, void 0, function* () {
                         const content = yield zip.files[k].async("text");
-                        pages[k] = content;
+                        if (config.contentFilter(content)) {
+                            pages[k] = content;
+                        }
                     })));
                     core_1.info(`resolving ${Object.keys(pages).length} pages`);
                     core_1.info(`Here are some: ${Object.keys(pages).slice(0, 5)}`);
