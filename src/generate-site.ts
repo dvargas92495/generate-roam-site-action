@@ -6,11 +6,16 @@ import fs from "fs";
 import jszip from "jszip";
 import marked from "marked";
 
-type Config = { index?: string; filter?: (title: string) => boolean };
+type Config = {
+  index: string;
+  titleFilter: (title: string) => boolean;
+  contentFilter: (content: string) => boolean;
+};
 
 const defaultConfig = {
   index: "Website Index",
-  filter: () => true,
+  titleFilter: () => true,
+  contentFilter: () => true,
 };
 
 type Node = {
@@ -18,10 +23,22 @@ type Node = {
   children: Node[];
 };
 
-const getRuleFromNode = (n: Node) => {
+const getTitleRuleFromNode = (n: Node) => {
   const { text, children } = n;
   if (text.trim().toUpperCase() === "STARTS WITH" && children.length) {
-    return (s: string) => s.startsWith(children[0].text);
+    return (title: string) => title.startsWith(children[0].text);
+  } else {
+    return () => true;
+  }
+};
+
+const getContentRuleFromNode = (n: Node) => {
+  const { text, children } = n;
+  if (text.trim().toUpperCase() === "TAGGED WITH" && children.length) {
+    return (content: string) =>
+      content.includes(`#${children[0].text}`) ||
+      content.includes(`[[${children[0].text}]]`) ||
+      content.includes(`${children[0].text}::`);
   } else {
     return () => true;
   }
@@ -58,15 +75,17 @@ const getConfigFromPage = async (page: jszip.JSZipObject) => {
   const filterNode = parsedTree.find(
     (n) => n.text.trim().toUpperCase() === "FILTER"
   );
-  const withIndex: Config =
+  const withIndex: Partial<Config> =
     indexNode && indexNode.children.length
       ? { index: indexNode.children[0].text.trim() }
       : {};
-  const withFilter: Config =
+  const withFilter: Partial<Config> =
     filterNode && filterNode.children.length
       ? {
-          filter: (s: string) =>
-            filterNode.children.map(getRuleFromNode).some((r) => r(s)),
+          titleFilter: (t: string) =>
+            filterNode.children.map(getTitleRuleFromNode).some((r) => r(t)),
+          contentFilter: (c: string) =>
+            filterNode.children.map(getContentRuleFromNode).some((r) => r(c)),
         }
       : {};
   return {
@@ -101,9 +120,9 @@ export const run = async (): Promise<void> =>
       const roamPassword = getInput("roam_password");
       const roamGraph = getInput("roam_graph");
       info(`Hello ${roamUsername}! Fetching from ${roamGraph}...`);
-      
+
       return puppeteer
-        .launch({
+        .launch(process.env.NODE_ENV === 'test' ? {} : {
           executablePath: "/usr/bin/google-chrome-stable",
         })
         .then(async (browser) => {
@@ -166,15 +185,17 @@ export const run = async (): Promise<void> =>
               ...(await (configPage
                 ? getConfigFromPage(configPage)
                 : Promise.resolve({}))),
-            };
+            } as Config;
 
             const pages: { [key: string]: string } = {};
             await Promise.all(
               Object.keys(zip.files)
-                .filter(config.filter)
+                .filter(config.titleFilter)
                 .map(async (k) => {
                   const content = await zip.files[k].async("text");
-                  pages[k] = content;
+                  if (config.contentFilter(content)) {
+                    pages[k] = content;
+                  }
                 })
             );
             info(`resolving ${Object.keys(pages).length} pages`);
