@@ -49928,12 +49928,20 @@ const getConfigFromPage = (page) => __awaiter(void 0, void 0, void 0, function* 
         : {};
     const withFilter = filterNode && filterNode.children.length
         ? {
-            titleFilter: (t) => filterNode.children.map(getTitleRuleFromNode).some((r) => r(t)),
+            titleFilter: (t) => t === withIndex.index ||
+                filterNode.children.map(getTitleRuleFromNode).some((r) => r(t)),
             contentFilter: (c) => filterNode.children.map(getContentRuleFromNode).some((r) => r(c)),
         }
         : {};
     return Object.assign(Object.assign({}, withIndex), withFilter);
 });
+const prepareContent = ({ content, pageNames, index, }) => {
+    const pageNameOrs = pageNames.join("|");
+    const hashOrs = pageNames.filter((p) => !p.includes(" "));
+    return content
+        .replace(new RegExp(`#?\\[\\[(${pageNameOrs})\\]\\]`), (_, t) => `[${t}](/${t === index ? "" : t})`)
+        .replace(new RegExp(`#(${hashOrs})`), (_, t) => `[${t}](/${t === index ? "" : t})`);
+};
 const hydrateHTML = ({ name, content, }) => `<!doctype html>
 <html>
 <head>
@@ -49954,9 +49962,11 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
             const roamGraph = core_1.getInput("roam_graph");
             core_1.info(`Hello ${roamUsername}! Fetching from ${roamGraph}...`);
             return puppeteer_1.default
-                .launch(process.env.NODE_ENV === 'test' ? {} : {
-                executablePath: "/usr/bin/google-chrome-stable",
-            })
+                .launch(process.env.NODE_ENV === "test"
+                ? {}
+                : {
+                    executablePath: "/usr/bin/google-chrome-stable",
+                })
                 .then((browser) => __awaiter(void 0, void 0, void 0, function* () {
                 const page = yield browser.newPage();
                 try {
@@ -50018,10 +50028,16 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                             pages[k] = content;
                         }
                     })));
-                    core_1.info(`resolving ${Object.keys(pages).length} pages`);
-                    core_1.info(`Here are some: ${Object.keys(pages).slice(0, 5)}`);
+                    const pageNames = Object.keys(pages).map((p) => p.substring(0, p.length - ".md".length));
+                    core_1.info(`resolving ${pageNames.length} pages`);
+                    core_1.info(`Here are some: ${pageNames.slice(0, 5)}`);
                     Object.keys(pages).map((p) => {
-                        const content = marked_1.default(pages[p]);
+                        const preMarked = prepareContent({
+                            content: pages[p],
+                            pageNames,
+                            index: config.index,
+                        });
+                        const content = marked_1.default(preMarked);
                         const name = p.substring(0, p.length - ".md".length);
                         const hydratedHtml = hydrateHTML({ name, content });
                         const htmlFileName = name === config.index ? "index.html" : `${name}.html`;

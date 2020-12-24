@@ -83,6 +83,7 @@ const getConfigFromPage = async (page: jszip.JSZipObject) => {
     filterNode && filterNode.children.length
       ? {
           titleFilter: (t: string) =>
+            t === withIndex.index ||
             filterNode.children.map(getTitleRuleFromNode).some((r) => r(t)),
           contentFilter: (c: string) =>
             filterNode.children.map(getContentRuleFromNode).some((r) => r(c)),
@@ -92,6 +93,28 @@ const getConfigFromPage = async (page: jszip.JSZipObject) => {
     ...withIndex,
     ...withFilter,
   };
+};
+
+const prepareContent = ({
+  content,
+  pageNames,
+  index,
+}: {
+  content: string;
+  pageNames: string[];
+  index: string;
+}) => {
+  const pageNameOrs = pageNames.join("|");
+  const hashOrs = pageNames.filter((p) => !p.includes(" "));
+  return content
+    .replace(
+      new RegExp(`#?\\[\\[(${pageNameOrs})\\]\\]`),
+      (_, t) => `[${t}](/${t === index ? "" : t})`
+    )
+    .replace(
+      new RegExp(`#(${hashOrs})`),
+      (_, t) => `[${t}](/${t === index ? "" : t})`
+    );
 };
 
 const hydrateHTML = ({
@@ -122,9 +145,13 @@ export const run = async (): Promise<void> =>
       info(`Hello ${roamUsername}! Fetching from ${roamGraph}...`);
 
       return puppeteer
-        .launch(process.env.NODE_ENV === 'test' ? {} : {
-          executablePath: "/usr/bin/google-chrome-stable",
-        })
+        .launch(
+          process.env.NODE_ENV === "test"
+            ? {}
+            : {
+                executablePath: "/usr/bin/google-chrome-stable",
+              }
+        )
         .then(async (browser) => {
           const page = await browser.newPage();
           try {
@@ -198,10 +225,18 @@ export const run = async (): Promise<void> =>
                   }
                 })
             );
-            info(`resolving ${Object.keys(pages).length} pages`);
-            info(`Here are some: ${Object.keys(pages).slice(0, 5)}`);
+            const pageNames = Object.keys(pages).map((p) =>
+              p.substring(0, p.length - ".md".length)
+            );
+            info(`resolving ${pageNames.length} pages`);
+            info(`Here are some: ${pageNames.slice(0, 5)}`);
             Object.keys(pages).map((p) => {
-              const content = marked(pages[p]);
+              const preMarked = prepareContent({
+                content: pages[p],
+                pageNames,
+                index: config.index,
+              });
+              const content = marked(preMarked);
               const name = p.substring(0, p.length - ".md".length);
               const hydratedHtml = hydrateHTML({ name, content });
               const htmlFileName =
