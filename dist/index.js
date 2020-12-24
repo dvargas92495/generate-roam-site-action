@@ -49874,6 +49874,18 @@ const defaultConfig = {
     index: "Website Index",
     titleFilter: () => true,
     contentFilter: () => true,
+    template: `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>$\{PAGE_NAME}</title>
+</head>
+<body>
+<div id="content">
+$\{PAGE_CONTENT}
+</div>
+</body>
+</html>`,
 };
 const getTitleRuleFromNode = (n) => {
     const { text, children } = n;
@@ -49896,6 +49908,7 @@ const getContentRuleFromNode = (n) => {
     }
 };
 const getConfigFromPage = (page) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c;
     const content = yield page.async("text");
     const contentParts = content.split("\n");
     const parsedTree = [];
@@ -49904,7 +49917,11 @@ const getConfigFromPage = (page) => __awaiter(void 0, void 0, void 0, function* 
     for (const text of contentParts) {
         const node = { text: text.substring(text.indexOf("- ") + 2), children: [] };
         const indent = text.indexOf("- ") / 4;
-        if (indent === currentIndent) {
+        if (indent < 0) {
+            const lastNode = currentNode.children[currentNode.children.length - 1];
+            lastNode.text = `${lastNode.text}\n${text}`;
+        }
+        else if (indent === currentIndent) {
             currentNode.children.push(node);
         }
         else if (indent > currentIndent) {
@@ -49921,19 +49938,27 @@ const getConfigFromPage = (page) => __awaiter(void 0, void 0, void 0, function* 
             currentNode.children.push(node);
         }
     }
-    const indexNode = parsedTree.find((n) => n.text.trim().toUpperCase() === "INDEX");
-    const filterNode = parsedTree.find((n) => n.text.trim().toUpperCase() === "FILTER");
-    const withIndex = indexNode && indexNode.children.length
-        ? { index: indexNode.children[0].text.trim() }
+    const getConfigNode = (key) => parsedTree.find((n) => n.text.trim().toUpperCase() === key.toUpperCase());
+    const indexNode = getConfigNode("index");
+    const filterNode = getConfigNode("filter");
+    const templateNode = getConfigNode("template");
+    const template = (_a = ((templateNode === null || templateNode === void 0 ? void 0 : templateNode.children) || [])
+        .map((s) => s.text.match(new RegExp("```html\n(.*)```", 's')))
+        .find((s) => !!s)) === null || _a === void 0 ? void 0 : _a[1];
+    const withIndex = ((_b = indexNode === null || indexNode === void 0 ? void 0 : indexNode.children) === null || _b === void 0 ? void 0 : _b.length) ? { index: indexNode.children[0].text.trim() }
         : {};
-    const withFilter = filterNode && filterNode.children.length
+    const withFilter = ((_c = filterNode === null || filterNode === void 0 ? void 0 : filterNode.children) === null || _c === void 0 ? void 0 : _c.length) ? {
+        titleFilter: (t) => t === withIndex.index ||
+            filterNode.children.map(getTitleRuleFromNode).some((r) => r(t)),
+        contentFilter: (c) => filterNode.children.map(getContentRuleFromNode).some((r) => r(c)),
+    }
+        : {};
+    const withTemplate = template
         ? {
-            titleFilter: (t) => t === withIndex.index ||
-                filterNode.children.map(getTitleRuleFromNode).some((r) => r(t)),
-            contentFilter: (c) => filterNode.children.map(getContentRuleFromNode).some((r) => r(c)),
+            template,
         }
         : {};
-    return Object.assign(Object.assign({}, withIndex), withFilter);
+    return Object.assign(Object.assign(Object.assign({}, withIndex), withFilter), withTemplate);
 });
 const convertPageToName = (p) => p.substring(0, p.length - ".md".length);
 const convertPageToHtml = ({ name, index }) => name === index
@@ -49946,18 +49971,9 @@ const prepareContent = ({ content, pageNames, index, }) => {
         .replace(new RegExp(`#?\\[\\[(${pageNameOrs})\\]\\]`, "g"), (_, name) => `[${name}](/${convertPageToHtml({ name, index })})`)
         .replace(new RegExp(`#(${hashOrs})`, "g"), (_, name) => `[${name}](/${convertPageToHtml({ name, index })})`);
 };
-const hydrateHTML = ({ name, content, }) => `<!doctype html>
-<html>
-<head>
-<meta charset="utf-8"/>
-<title>${name}</title>
-</head>
-<body>
-<div id="content">
-${content}
-</div>
-</body>
-</html>`;
+const hydrateHTML = ({ name, content, template, }) => template
+    .replace(/\${PAGE_NAME}/g, name)
+    .replace(/\${PAGE_CONTENT}/g, content);
 const run = () => __awaiter(void 0, void 0, void 0, function* () {
     return yield new Promise((resolve, reject) => {
         try {
@@ -50043,7 +50059,11 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                         });
                         const content = marked_1.default(preMarked);
                         const name = convertPageToName(p);
-                        const hydratedHtml = hydrateHTML({ name, content });
+                        const hydratedHtml = hydrateHTML({
+                            name,
+                            content,
+                            template: config.template,
+                        });
                         const htmlFileName = convertPageToHtml({
                             name,
                             index: config.index,

@@ -10,12 +10,25 @@ type Config = {
   index: string;
   titleFilter: (title: string) => boolean;
   contentFilter: (content: string) => boolean;
+  template: string;
 };
 
 const defaultConfig = {
   index: "Website Index",
   titleFilter: () => true,
   contentFilter: () => true,
+  template: `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>$\{PAGE_NAME}</title>
+</head>
+<body>
+<div id="content">
+$\{PAGE_CONTENT}
+</div>
+</body>
+</html>`,
 };
 
 type Node = {
@@ -53,7 +66,10 @@ const getConfigFromPage = async (page: jszip.JSZipObject) => {
   for (const text of contentParts) {
     const node = { text: text.substring(text.indexOf("- ") + 2), children: [] };
     const indent = text.indexOf("- ") / 4;
-    if (indent === currentIndent) {
+    if (indent < 0) {
+      const lastNode = currentNode.children[currentNode.children.length - 1];
+      lastNode.text = `${lastNode.text}\n${text}`;
+    } else if (indent === currentIndent) {
       currentNode.children.push(node);
     } else if (indent > currentIndent) {
       currentNode = currentNode.children[currentNode.children.length - 1];
@@ -69,29 +85,35 @@ const getConfigFromPage = async (page: jszip.JSZipObject) => {
     }
   }
 
-  const indexNode = parsedTree.find(
-    (n) => n.text.trim().toUpperCase() === "INDEX"
-  );
-  const filterNode = parsedTree.find(
-    (n) => n.text.trim().toUpperCase() === "FILTER"
-  );
-  const withIndex: Partial<Config> =
-    indexNode && indexNode.children.length
-      ? { index: indexNode.children[0].text.trim() }
-      : {};
-  const withFilter: Partial<Config> =
-    filterNode && filterNode.children.length
-      ? {
-          titleFilter: (t: string) =>
-            t === withIndex.index ||
-            filterNode.children.map(getTitleRuleFromNode).some((r) => r(t)),
-          contentFilter: (c: string) =>
-            filterNode.children.map(getContentRuleFromNode).some((r) => r(c)),
-        }
-      : {};
+  const getConfigNode = (key: string) =>
+    parsedTree.find((n) => n.text.trim().toUpperCase() === key.toUpperCase());
+  const indexNode = getConfigNode("index");
+  const filterNode = getConfigNode("filter");
+  const templateNode = getConfigNode("template");
+  const template = (templateNode?.children || [])
+    .map((s) => s.text.match(new RegExp("```html\n(.*)```", 's')))
+    .find((s) => !!s)?.[1];
+  const withIndex: Partial<Config> = indexNode?.children?.length
+    ? { index: indexNode.children[0].text.trim() }
+    : {};
+  const withFilter: Partial<Config> = filterNode?.children?.length
+    ? {
+        titleFilter: (t: string) =>
+          t === withIndex.index ||
+          filterNode.children.map(getTitleRuleFromNode).some((r) => r(t)),
+        contentFilter: (c: string) =>
+          filterNode.children.map(getContentRuleFromNode).some((r) => r(c)),
+      }
+    : {};
+  const withTemplate: Partial<Config> = template
+    ? {
+        template,
+      }
+    : {};
   return {
     ...withIndex,
     ...withFilter,
+    ...withTemplate,
   };
 };
 
@@ -128,21 +150,15 @@ const prepareContent = ({
 const hydrateHTML = ({
   name,
   content,
+  template,
 }: {
   name: string;
   content: string;
-}) => `<!doctype html>
-<html>
-<head>
-<meta charset="utf-8"/>
-<title>${name}</title>
-</head>
-<body>
-<div id="content">
-${content}
-</div>
-</body>
-</html>`;
+  template: string;
+}) =>
+  template
+    .replace(/\${PAGE_NAME}/g, name)
+    .replace(/\${PAGE_CONTENT}/g, content);
 
 export const run = async (): Promise<void> =>
   await new Promise((resolve, reject) => {
@@ -244,7 +260,11 @@ export const run = async (): Promise<void> =>
               });
               const content = marked(preMarked);
               const name = convertPageToName(p);
-              const hydratedHtml = hydrateHTML({ name, content });
+              const hydratedHtml = hydrateHTML({
+                name,
+                content,
+                template: config.template,
+              });
               const htmlFileName = convertPageToHtml({
                 name,
                 index: config.index,
