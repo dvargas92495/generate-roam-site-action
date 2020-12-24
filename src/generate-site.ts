@@ -95,6 +95,14 @@ const getConfigFromPage = async (page: jszip.JSZipObject) => {
   };
 };
 
+const convertPageToName = (p: string) =>
+  p.substring(0, p.length - ".md".length);
+
+const convertPageToHtml = ({ name, index }: { name: string; index: string }) =>
+  name === index
+    ? "index.html"
+    : `${encodeURIComponent(name.replace(/ /g, "_"))}.html`;
+
 const prepareContent = ({
   content,
   pageNames,
@@ -108,12 +116,12 @@ const prepareContent = ({
   const hashOrs = pageNames.filter((p) => !p.includes(" "));
   return content
     .replace(
-      new RegExp(`#?\\[\\[(${pageNameOrs})\\]\\]`),
-      (_, t) => `[${t}](/${t === index ? "" : t})`
+      new RegExp(`#?\\[\\[(${pageNameOrs})\\]\\]`, "g"),
+      (_, name) => `[${name}](/${convertPageToHtml({ name, index })})`
     )
     .replace(
-      new RegExp(`#(${hashOrs})`),
-      (_, t) => `[${t}](/${t === index ? "" : t})`
+      new RegExp(`#(${hashOrs})`, "g"),
+      (_, name) => `[${name}](/${convertPageToHtml({ name, index })})`
     );
 };
 
@@ -225,9 +233,7 @@ export const run = async (): Promise<void> =>
                   }
                 })
             );
-            const pageNames = Object.keys(pages).map((p) =>
-              p.substring(0, p.length - ".md".length)
-            );
+            const pageNames = Object.keys(pages).map(convertPageToName);
             info(`resolving ${pageNames.length} pages`);
             info(`Here are some: ${pageNames.slice(0, 5)}`);
             Object.keys(pages).map((p) => {
@@ -237,15 +243,14 @@ export const run = async (): Promise<void> =>
                 index: config.index,
               });
               const content = marked(preMarked);
-              const name = p.substring(0, p.length - ".md".length);
+              const name = convertPageToName(p);
               const hydratedHtml = hydrateHTML({ name, content });
-              const htmlFileName =
-                name === config.index ? "index.html" : `${name}.html`;
-              const newFileName = encodeURIComponent(
-                htmlFileName.replace(/ /g, "_")
-              );
+              const htmlFileName = convertPageToHtml({
+                name,
+                index: config.index,
+              });
               fs.writeFileSync(
-                path.join(outputPath, newFileName),
+                path.join(outputPath, htmlFileName),
                 hydratedHtml
               );
             });

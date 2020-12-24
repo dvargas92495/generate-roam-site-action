@@ -49935,12 +49935,16 @@ const getConfigFromPage = (page) => __awaiter(void 0, void 0, void 0, function* 
         : {};
     return Object.assign(Object.assign({}, withIndex), withFilter);
 });
+const convertPageToName = (p) => p.substring(0, p.length - ".md".length);
+const convertPageToHtml = ({ name, index }) => name === index
+    ? "index.html"
+    : `${encodeURIComponent(name.replace(/ /g, "_"))}.html`;
 const prepareContent = ({ content, pageNames, index, }) => {
     const pageNameOrs = pageNames.join("|");
     const hashOrs = pageNames.filter((p) => !p.includes(" "));
     return content
-        .replace(new RegExp(`#?\\[\\[(${pageNameOrs})\\]\\]`), (_, t) => `[${t}](/${t === index ? "" : t})`)
-        .replace(new RegExp(`#(${hashOrs})`), (_, t) => `[${t}](/${t === index ? "" : t})`);
+        .replace(new RegExp(`#?\\[\\[(${pageNameOrs})\\]\\]`, "g"), (_, name) => `[${name}](/${convertPageToHtml({ name, index })})`)
+        .replace(new RegExp(`#(${hashOrs})`, "g"), (_, name) => `[${name}](/${convertPageToHtml({ name, index })})`);
 };
 const hydrateHTML = ({ name, content, }) => `<!doctype html>
 <html>
@@ -50028,7 +50032,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                             pages[k] = content;
                         }
                     })));
-                    const pageNames = Object.keys(pages).map((p) => p.substring(0, p.length - ".md".length));
+                    const pageNames = Object.keys(pages).map(convertPageToName);
                     core_1.info(`resolving ${pageNames.length} pages`);
                     core_1.info(`Here are some: ${pageNames.slice(0, 5)}`);
                     Object.keys(pages).map((p) => {
@@ -50038,11 +50042,13 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                             index: config.index,
                         });
                         const content = marked_1.default(preMarked);
-                        const name = p.substring(0, p.length - ".md".length);
+                        const name = convertPageToName(p);
                         const hydratedHtml = hydrateHTML({ name, content });
-                        const htmlFileName = name === config.index ? "index.html" : `${name}.html`;
-                        const newFileName = encodeURIComponent(htmlFileName.replace(/ /g, "_"));
-                        fs_1.default.writeFileSync(path_1.default.join(outputPath, newFileName), hydratedHtml);
+                        const htmlFileName = convertPageToHtml({
+                            name,
+                            index: config.index,
+                        });
+                        fs_1.default.writeFileSync(path_1.default.join(outputPath, htmlFileName), hydratedHtml);
                     });
                     return resolve();
                 }
