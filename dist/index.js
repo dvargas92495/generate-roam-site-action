@@ -50007,7 +50007,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                     yield page.click("button.bp3-button");
                     core_1.info(`Signing in ${new Date().toLocaleTimeString()}`);
                     yield page.waitForSelector(`a[href="#/app/${roamGraph}"]`, {
-                        timeout: 20000,
+                        timeout: 120000,
                     });
                     yield page.click(`a[href="#/app/${roamGraph}"]`);
                     core_1.info(`entering graph ${new Date().toLocaleTimeString()}`);
@@ -50075,7 +50075,6 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                 catch (e) {
                     yield page.screenshot({ path: "error.png" });
                     core_1.error("took screenshot");
-                    core_1.error(e.message);
                     return reject(e);
                 }
             }))

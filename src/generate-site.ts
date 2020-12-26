@@ -197,7 +197,7 @@ export const run = async (): Promise<void> =>
             await page.click("button.bp3-button");
             info(`Signing in ${new Date().toLocaleTimeString()}`);
             await page.waitForSelector(`a[href="#/app/${roamGraph}"]`, {
-              timeout: 20000,
+              timeout: 120000,
             });
             await page.click(`a[href="#/app/${roamGraph}"]`);
             info(`entering graph ${new Date().toLocaleTimeString()}`);
@@ -278,7 +278,6 @@ export const run = async (): Promise<void> =>
           } catch (e) {
             await page.screenshot({ path: "error.png" });
             error("took screenshot");
-            error(e.message);
             return reject(e);
           }
         })
