@@ -24,10 +24,10 @@ const extractTag = (tag: string) =>
     ? tag.substring(1)
     : tag;
 
-const defaultConfig = {
+export const defaultConfig = {
   index: "Website Index",
-  titleFilter: (title: string) => title !== `${CONFIG_PAGE_NAME}.md`,
-  contentFilter: () => true,
+  titleFilter: (title: string): boolean => title !== `${CONFIG_PAGE_NAME}.md`,
+  contentFilter: (): boolean => true,
   template: `<!doctype html>
 <html>
 <head>
@@ -147,18 +147,17 @@ const prepareContent = ({
   index: string;
 }) => {
   let ignoreIndent = -1;
+  let codeBlockIndent = -1;
   const filteredContent = content
     .split("\n")
     .filter((l) => {
-      const dashIndex = l.indexOf("- ")
-      if (dashIndex < 0) {
-        return ignoreIndent >= 0;
-      }
-      const indent = dashIndex / 4;
+      const numSpaces = l.search(/\S/);
+      const indent = numSpaces / 4;
       if (ignoreIndent >= 0 && indent > ignoreIndent) {
         return false;
       }
-      const text = l.substring(dashIndex + "- ".length);
+      const bullet = l.substring(numSpaces);
+      const text = bullet.startsWith("- ") ? bullet.substring(2) : bullet;
       const isIgnore = extractTag(text.trim()) === `${CONFIG_PAGE_NAME}/ignore`;
       if (isIgnore) {
         ignoreIndent = indent;
@@ -166,6 +165,23 @@ const prepareContent = ({
       }
       ignoreIndent = -1;
       return true;
+    })
+    .map((s) => {
+      if (s.trim().startsWith('- ')) {
+        const numSpaces = s.search(/\S/);
+        const text = s.substring(numSpaces + 2);
+        if (text.startsWith('```')) {
+          codeBlockIndent = numSpaces / 4;
+          return `${s.substring(0, s.length - text.length)}\n`;
+        }
+        return s;
+      }
+      if (codeBlockIndent > -1) {
+        const indent = "".padStart((codeBlockIndent + 2) * 4, ' ')
+        const line = s.endsWith('```') ? s.substring(0, s.length- 3) : s;
+        return `${indent}${line}`;
+      }
+      return `${s}\n`;
     })
     .join("\n");
 
@@ -182,6 +198,38 @@ const prepareContent = ({
     );
 };
 
+export const renderHtmlFromPage = ({
+  outputPath,
+  pageContent,
+  p,
+  config,
+  pageNames,
+}: {
+  outputPath: string;
+  pageContent: string;
+  p: string;
+  config: Config;
+  pageNames: string[]
+}): void => {
+  const preMarked = prepareContent({
+    content: pageContent,
+    pageNames,
+    index: config.index,
+  });
+  const content = marked(preMarked);
+  const name = convertPageToName(p);
+  const hydratedHtml = hydrateHTML({
+    name,
+    content,
+    template: config.template,
+  });
+  const htmlFileName = convertPageToHtml({
+    name,
+    index: config.index,
+  });
+  fs.writeFileSync(path.join(outputPath, htmlFileName), hydratedHtml);
+};
+
 const hydrateHTML = ({
   name,
   content,
@@ -195,135 +243,124 @@ const hydrateHTML = ({
     .replace(/\${PAGE_NAME}/g, name)
     .replace(/\${PAGE_CONTENT}/g, content);
 
-export const run = async (): Promise<void> =>
-  await new Promise((resolve, reject) => {
-    try {
-      const roamUsername = getInput("roam_username");
-      const roamPassword = getInput("roam_password");
-      const roamGraph = getInput("roam_graph");
-      info(`Hello ${roamUsername}! Fetching from ${roamGraph}...`);
+export const run = async (): Promise<void> => {
+  const roamUsername = getInput("roam_username");
+  const roamPassword = getInput("roam_password");
+  const roamGraph = getInput("roam_graph");
+  info(`Hello ${roamUsername}! Fetching from ${roamGraph}...`);
 
-      return puppeteer
-        .launch(
-          process.env.NODE_ENV === "test"
-            ? {}
-            : {
-                executablePath: "/usr/bin/google-chrome-stable",
-              }
-        )
-        .then(async (browser) => {
-          const page = await browser.newPage();
-          try {
-            const downloadPath = path.join(process.cwd(), "downloads");
-            const outputPath = path.join(process.cwd(), "out");
-            fs.mkdirSync(downloadPath, { recursive: true });
-            fs.mkdirSync(outputPath, { recursive: true });
-            const cdp = await page.target().createCDPSession();
-            cdp.send("Page.setDownloadBehavior", {
-              behavior: "allow",
-              downloadPath,
-            });
-
-            await page.goto("https://roamresearch.com/#/signin", {
-              waitUntil: "networkidle0",
-            });
-            await page.type("input[name=email]", roamUsername);
-            await page.type("input[name=password]", roamPassword);
-            await page.click("button.bp3-button");
-            info(`Signing in ${new Date().toLocaleTimeString()}`);
-            await page.waitForSelector(`a[href="#/app/${roamGraph}"]`, {
-              timeout: 120000,
-            });
-            await page.click(`a[href="#/app/${roamGraph}"]`);
-            info(`entering graph ${new Date().toLocaleTimeString()}`);
-            await page.waitForSelector("span.bp3-icon-more", {
-              timeout: 120000,
-            });
-            await page.click(`span.bp3-icon-more`);
-            await page.waitForXPath("//div[text()='Export All']", {
-              timeout: 120000,
-            });
-            const [exporter] = await page.$x("//div[text()='Export All']");
-            await exporter.click();
-            await page.waitForSelector(".bp3-intent-primary");
-            await page.click(".bp3-intent-primary");
-            info(`exporting ${new Date().toLocaleTimeString()}`);
-            const zipPath = await new Promise<string>((res) => {
-              const watcher = watch(
-                downloadPath,
-                { filter: /\.zip$/ },
-                (eventType?: "update" | "remove", filename?: string) => {
-                  if (eventType == "update" && filename) {
-                    watcher.close();
-                    res(filename);
-                  }
-                }
-              );
-            });
-            info(`done waiting ${new Date().toLocaleTimeString()}`);
-            await browser.close();
-            const data = await fs.readFileSync(zipPath);
-            const zip = await jszip.loadAsync(data);
-
-            const configPage = zip.files[`${CONFIG_PAGE_NAME}.md`];
-            const config = {
-              ...defaultConfig,
-              ...(await (configPage
-                ? getConfigFromPage(configPage)
-                : Promise.resolve({}))),
-            } as Config;
-
-            const pages: { [key: string]: string } = {};
-            await Promise.all(
-              Object.keys(zip.files)
-                .filter(config.titleFilter)
-                .map(async (k) => {
-                  const content = await zip.files[k].async("text");
-                  if (config.contentFilter(content)) {
-                    pages[k] = content;
-                  }
-                })
-            );
-            const pageNames = Object.keys(pages).map(convertPageToName);
-            info(`resolving ${pageNames.length} pages`);
-            info(`Here are some: ${pageNames.slice(0, 5)}`);
-            Object.keys(pages).map((p) => {
-              const preMarked = prepareContent({
-                content: pages[p],
-                pageNames,
-                index: config.index,
-              });
-              const content = marked(preMarked);
-              const name = convertPageToName(p);
-              const hydratedHtml = hydrateHTML({
-                name,
-                content,
-                template: config.template,
-              });
-              const htmlFileName = convertPageToHtml({
-                name,
-                index: config.index,
-              });
-              fs.writeFileSync(
-                path.join(outputPath, htmlFileName),
-                hydratedHtml
-              );
-            });
-            return resolve();
-          } catch (e) {
-            await page.screenshot({ path: "error.png" });
-            error("took screenshot");
-            return reject(e);
+  return puppeteer
+    .launch(
+      process.env.NODE_ENV === "test"
+        ? {}
+        : {
+            executablePath: "/usr/bin/google-chrome-stable",
           }
-        })
-        .catch((e) => {
-          error(e.message);
-          return reject(e);
+    )
+    .then(async (browser) => {
+      const page = await browser.newPage();
+      try {
+        const downloadPath = path.join(process.cwd(), "downloads");
+        const outputPath = path.join(process.cwd(), "out");
+        fs.mkdirSync(downloadPath, { recursive: true });
+        fs.mkdirSync(outputPath, { recursive: true });
+        const cdp = await page.target().createCDPSession();
+        cdp.send("Page.setDownloadBehavior", {
+          behavior: "allow",
+          downloadPath,
         });
-    } catch (error) {
-      info("catching error...");
-      return reject(error);
-    }
-  });
+
+        await page.goto("https://roamresearch.com/#/signin", {
+          waitUntil: "networkidle0",
+        });
+        await page.type("input[name=email]", roamUsername);
+        await page.type("input[name=password]", roamPassword);
+        await page.click("button.bp3-button");
+        info(`Signing in ${new Date().toLocaleTimeString()}`);
+        await page.waitForSelector(`a[href="#/app/${roamGraph}"]`, {
+          timeout: 120000,
+        });
+        await page.click(`a[href="#/app/${roamGraph}"]`);
+        info(`entering graph ${new Date().toLocaleTimeString()}`);
+        await page.waitForSelector("span.bp3-icon-more", {
+          timeout: 120000,
+        });
+        await page.click(`span.bp3-icon-more`);
+        await page.waitForXPath("//div[text()='Export All']", {
+          timeout: 120000,
+        });
+        const [exporter] = await page.$x("//div[text()='Export All']");
+        await exporter.click();
+        await page.waitForSelector(".bp3-intent-primary");
+        await page.click(".bp3-intent-primary");
+        info(`exporting ${new Date().toLocaleTimeString()}`);
+        const zipPath = await new Promise<string>((res) => {
+          const watcher = watch(
+            downloadPath,
+            { filter: /\.zip$/ },
+            (eventType?: "update" | "remove", filename?: string) => {
+              if (eventType == "update" && filename) {
+                watcher.close();
+                res(filename);
+              }
+            }
+          );
+        });
+        info(`done waiting ${new Date().toLocaleTimeString()}`);
+        await page.close();
+        await browser.close();
+        const data = await fs.readFileSync(zipPath);
+        const zip = await jszip.loadAsync(data);
+
+        const configPage = zip.files[`${CONFIG_PAGE_NAME}.md`];
+        const config = {
+          ...defaultConfig,
+          ...(await (configPage
+            ? getConfigFromPage(configPage)
+            : Promise.resolve({}))),
+        } as Config;
+
+        const pages: { [key: string]: string } = {};
+        await Promise.all(
+          Object.keys(zip.files)
+            .filter(config.titleFilter)
+            .map(async (k) => {
+              const content = await zip.files[k].async("text");
+              if (config.contentFilter(content)) {
+                pages[k] = content;
+              }
+            })
+        );
+        const pageNames = Object.keys(pages).map(convertPageToName);
+        info(`resolving ${pageNames.length} pages`);
+        info(`Here are some: ${pageNames.slice(0, 5)}`);
+        Object.keys(pages).map((p) => {
+          if (process.env.NODE_ENV === "test") {
+            try {
+              fs.writeFileSync(path.join(outputPath, p), pages[p]);
+            } catch {
+              console.warn("failed to output md for", p);
+            }
+          }
+          renderHtmlFromPage({
+            outputPath,
+            config,
+            pageContent: pages[p],
+            p,
+            pageNames,
+          });
+        });
+        return;
+      } catch (e) {
+        await page.screenshot({ path: "error.png" });
+        error("took screenshot");
+        throw new Error(e);
+      }
+    })
+    .catch((e) => {
+      error(e.message);
+      throw new Error(e);
+    });
+};
 
 export default run;

@@ -1,5 +1,7 @@
-import run from "../src/generate-site";
+import run, { defaultConfig, renderHtmlFromPage } from "../src/generate-site";
 import dotenv from "dotenv";
+import path from 'path';
+import fs from 'fs';
 dotenv.config();
 
 test("Run Action", async (done) => {
@@ -8,3 +10,14 @@ test("Run Action", async (done) => {
     .then(done)
     .catch(({ message }) => fail(message));
 });
+
+test.skip('render', async () => {
+  const pageContent = fs.readFileSync(path.join(__dirname, '..','out', 'Blog Post.md')).toString();
+  await renderHtmlFromPage({
+    outputPath: path.join(__dirname, '..','out'),
+    pageContent,
+    p: 'Blog Post.md',
+    pageNames: [],
+    config: defaultConfig,
+  })
+})
