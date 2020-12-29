@@ -49870,9 +49870,17 @@ const node_watch_1 = __importDefault(__webpack_require__(665));
 const fs_1 = __importDefault(__webpack_require__(5747));
 const jszip_1 = __importDefault(__webpack_require__(3592));
 const marked_1 = __importDefault(__webpack_require__(4223));
+const CONFIG_PAGE_NAME = "roam/js/public-garden";
+const extractTag = (tag) => tag.startsWith("#[[") && tag.endsWith("]]")
+    ? tag.substring(3, tag.length - 2)
+    : tag.startsWith("[[") && tag.endsWith("]]")
+        ? tag.substring(2, tag.length - 2)
+        : tag.startsWith("#")
+            ? tag.substring(1)
+            : tag;
 const defaultConfig = {
     index: "Website Index",
-    titleFilter: () => true,
+    titleFilter: (title) => title !== `${CONFIG_PAGE_NAME}.md`,
     contentFilter: () => true,
     template: `<!doctype html>
 <html>
@@ -49890,18 +49898,19 @@ $\{PAGE_CONTENT}
 const getTitleRuleFromNode = (n) => {
     const { text, children } = n;
     if (text.trim().toUpperCase() === "STARTS WITH" && children.length) {
-        return (title) => title.startsWith(children[0].text);
+        return (title) => title.startsWith(extractTag(children[0].text));
     }
     else {
-        return () => true;
+        return defaultConfig.titleFilter;
     }
 };
 const getContentRuleFromNode = (n) => {
     const { text, children } = n;
     if (text.trim().toUpperCase() === "TAGGED WITH" && children.length) {
-        return (content) => content.includes(`#${children[0].text}`) ||
-            content.includes(`[[${children[0].text}]]`) ||
-            content.includes(`${children[0].text}::`);
+        const tag = extractTag(children[0].text);
+        return (content) => content.includes(`#${tag}`) ||
+            content.includes(`[[${tag}]]`) ||
+            content.includes(`${tag}::`);
     }
     else {
         return () => true;
@@ -49943,9 +49952,9 @@ const getConfigFromPage = (page) => __awaiter(void 0, void 0, void 0, function* 
     const filterNode = getConfigNode("filter");
     const templateNode = getConfigNode("template");
     const template = (_a = ((templateNode === null || templateNode === void 0 ? void 0 : templateNode.children) || [])
-        .map((s) => s.text.match(new RegExp("```html\n(.*)```", 's')))
+        .map((s) => s.text.match(new RegExp("```html\n(.*)```", "s")))
         .find((s) => !!s)) === null || _a === void 0 ? void 0 : _a[1];
-    const withIndex = ((_b = indexNode === null || indexNode === void 0 ? void 0 : indexNode.children) === null || _b === void 0 ? void 0 : _b.length) ? { index: indexNode.children[0].text.trim() }
+    const withIndex = ((_b = indexNode === null || indexNode === void 0 ? void 0 : indexNode.children) === null || _b === void 0 ? void 0 : _b.length) ? { index: extractTag(indexNode.children[0].text.trim()) }
         : {};
     const withFilter = ((_c = filterNode === null || filterNode === void 0 ? void 0 : filterNode.children) === null || _c === void 0 ? void 0 : _c.length) ? {
         titleFilter: (t) => t === withIndex.index ||
@@ -50035,7 +50044,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                     yield browser.close();
                     const data = yield fs_1.default.readFileSync(zipPath);
                     const zip = yield jszip_1.default.loadAsync(data);
-                    const configPage = zip.files["roam/js/public-garden.md"];
+                    const configPage = zip.files[`${CONFIG_PAGE_NAME}.md`];
                     const config = Object.assign(Object.assign({}, defaultConfig), (yield (configPage
                         ? getConfigFromPage(configPage)
                         : Promise.resolve({}))));
