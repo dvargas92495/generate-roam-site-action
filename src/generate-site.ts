@@ -146,9 +146,32 @@ const prepareContent = ({
   pageNames: string[];
   index: string;
 }) => {
+  let ignoreIndent = -1;
+  const filteredContent = content
+    .split("\n")
+    .filter((l) => {
+      const dashIndex = l.indexOf("- ")
+      if (dashIndex < 0) {
+        return ignoreIndent >= 0;
+      }
+      const indent = dashIndex / 4;
+      if (ignoreIndent >= 0 && indent > ignoreIndent) {
+        return false;
+      }
+      const text = l.substring(dashIndex + "- ".length);
+      const isIgnore = extractTag(text.trim()) === `${CONFIG_PAGE_NAME}/ignore`;
+      if (isIgnore) {
+        ignoreIndent = indent;
+        return false;
+      }
+      ignoreIndent = -1;
+      return true;
+    })
+    .join("\n");
+
   const pageNameOrs = pageNames.join("|");
   const hashOrs = pageNames.filter((p) => !p.includes(" "));
-  return content
+  return filteredContent
     .replace(
       new RegExp(`#?\\[\\[(${pageNameOrs})\\]\\]`, "g"),
       (_, name) => `[${name}](/${convertPageToHtml({ name, index })})`
