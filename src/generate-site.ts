@@ -6,6 +6,8 @@ import fs from "fs";
 import jszip from "jszip";
 import marked from "marked";
 
+const CONFIG_PAGE_NAME = "roam/js/public-garden";
+
 type Config = {
   index: string;
   titleFilter: (title: string) => boolean;
@@ -13,9 +15,18 @@ type Config = {
   template: string;
 };
 
+const extractTag = (tag: string) =>
+  tag.startsWith("#[[") && tag.endsWith("]]")
+    ? tag.substring(3, tag.length - 2)
+    : tag.startsWith("[[") && tag.endsWith("]]")
+    ? tag.substring(2, tag.length - 2)
+    : tag.startsWith("#")
+    ? tag.substring(1)
+    : tag;
+
 const defaultConfig = {
   index: "Website Index",
-  titleFilter: () => true,
+  titleFilter: (title: string) => title !== `${CONFIG_PAGE_NAME}.md`,
   contentFilter: () => true,
   template: `<!doctype html>
 <html>
@@ -39,19 +50,20 @@ type Node = {
 const getTitleRuleFromNode = (n: Node) => {
   const { text, children } = n;
   if (text.trim().toUpperCase() === "STARTS WITH" && children.length) {
-    return (title: string) => title.startsWith(children[0].text);
+    return (title: string) => title.startsWith(extractTag(children[0].text));
   } else {
-    return () => true;
+    return defaultConfig.titleFilter;
   }
 };
 
 const getContentRuleFromNode = (n: Node) => {
   const { text, children } = n;
   if (text.trim().toUpperCase() === "TAGGED WITH" && children.length) {
+    const tag = extractTag(children[0].text);
     return (content: string) =>
-      content.includes(`#${children[0].text}`) ||
-      content.includes(`[[${children[0].text}]]`) ||
-      content.includes(`${children[0].text}::`);
+      content.includes(`#${tag}`) ||
+      content.includes(`[[${tag}]]`) ||
+      content.includes(`${tag}::`);
   } else {
     return () => true;
   }
@@ -91,10 +103,10 @@ const getConfigFromPage = async (page: jszip.JSZipObject) => {
   const filterNode = getConfigNode("filter");
   const templateNode = getConfigNode("template");
   const template = (templateNode?.children || [])
-    .map((s) => s.text.match(new RegExp("```html\n(.*)```", 's')))
+    .map((s) => s.text.match(new RegExp("```html\n(.*)```", "s")))
     .find((s) => !!s)?.[1];
   const withIndex: Partial<Config> = indexNode?.children?.length
-    ? { index: indexNode.children[0].text.trim() }
+    ? { index: extractTag(indexNode.children[0].text.trim()) }
     : {};
   const withFilter: Partial<Config> = filterNode?.children?.length
     ? {
@@ -230,7 +242,7 @@ export const run = async (): Promise<void> =>
             const data = await fs.readFileSync(zipPath);
             const zip = await jszip.loadAsync(data);
 
-            const configPage = zip.files["roam/js/public-garden.md"];
+            const configPage = zip.files[`${CONFIG_PAGE_NAME}.md`];
             const config = {
               ...defaultConfig,
               ...(await (configPage
