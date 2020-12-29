@@ -49862,7 +49862,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.run = void 0;
+exports.run = exports.renderHtmlFromPage = exports.defaultConfig = void 0;
 const core_1 = __webpack_require__(2186);
 const puppeteer_1 = __importDefault(__webpack_require__(9014));
 const path_1 = __importDefault(__webpack_require__(5622));
@@ -49878,7 +49878,7 @@ const extractTag = (tag) => tag.startsWith("#[[") && tag.endsWith("]]")
         : tag.startsWith("#")
             ? tag.substring(1)
             : tag;
-const defaultConfig = {
+exports.defaultConfig = {
     index: "Website Index",
     titleFilter: (title) => title !== `${CONFIG_PAGE_NAME}.md`,
     contentFilter: () => true,
@@ -49901,7 +49901,7 @@ const getTitleRuleFromNode = (n) => {
         return (title) => title.startsWith(extractTag(children[0].text));
     }
     else {
-        return defaultConfig.titleFilter;
+        return exports.defaultConfig.titleFilter;
     }
 };
 const getContentRuleFromNode = (n) => {
@@ -49975,18 +49975,17 @@ const convertPageToHtml = ({ name, index }) => name === index
     : `${encodeURIComponent(name.replace(/ /g, "_"))}.html`;
 const prepareContent = ({ content, pageNames, index, }) => {
     let ignoreIndent = -1;
+    let codeBlockIndent = -1;
     const filteredContent = content
         .split("\n")
         .filter((l) => {
-        const dashIndex = l.indexOf("- ");
-        if (dashIndex < 0) {
-            return ignoreIndent >= 0;
-        }
-        const indent = dashIndex / 4;
+        const numSpaces = l.search(/\S/);
+        const indent = numSpaces / 4;
         if (ignoreIndent >= 0 && indent > ignoreIndent) {
             return false;
         }
-        const text = l.substring(dashIndex + "- ".length);
+        const bullet = l.substring(numSpaces);
+        const text = bullet.startsWith("- ") ? bullet.substring(2) : bullet;
         const isIgnore = extractTag(text.trim()) === `${CONFIG_PAGE_NAME}/ignore`;
         if (isIgnore) {
             ignoreIndent = indent;
@@ -49995,6 +49994,23 @@ const prepareContent = ({ content, pageNames, index, }) => {
         ignoreIndent = -1;
         return true;
     })
+        .map((s) => {
+        if (s.trim().startsWith('- ')) {
+            const numSpaces = s.search(/\S/);
+            const text = s.substring(numSpaces + 2);
+            if (text.startsWith('```')) {
+                codeBlockIndent = numSpaces / 4;
+                return `${s.substring(0, s.length - text.length)}\n`;
+            }
+            return s;
+        }
+        if (codeBlockIndent > -1) {
+            const indent = "".padStart((codeBlockIndent + 2) * 4, ' ');
+            const line = s.endsWith('```') ? s.substring(0, s.length - 3) : s;
+            return `${indent}${line}`;
+        }
+        return `${s}\n`;
+    })
         .join("\n");
     const pageNameOrs = pageNames.join("|");
     const hashOrs = pageNames.filter((p) => !p.includes(" "));
@@ -50002,122 +50018,133 @@ const prepareContent = ({ content, pageNames, index, }) => {
         .replace(new RegExp(`#?\\[\\[(${pageNameOrs})\\]\\]`, "g"), (_, name) => `[${name}](/${convertPageToHtml({ name, index })})`)
         .replace(new RegExp(`#(${hashOrs})`, "g"), (_, name) => `[${name}](/${convertPageToHtml({ name, index })})`);
 };
+const renderHtmlFromPage = ({ outputPath, pageContent, p, config, pageNames, }) => {
+    const preMarked = prepareContent({
+        content: pageContent,
+        pageNames,
+        index: config.index,
+    });
+    const content = marked_1.default(preMarked);
+    const name = convertPageToName(p);
+    const hydratedHtml = hydrateHTML({
+        name,
+        content,
+        template: config.template,
+    });
+    const htmlFileName = convertPageToHtml({
+        name,
+        index: config.index,
+    });
+    fs_1.default.writeFileSync(path_1.default.join(outputPath, htmlFileName), hydratedHtml);
+};
+exports.renderHtmlFromPage = renderHtmlFromPage;
 const hydrateHTML = ({ name, content, template, }) => template
     .replace(/\${PAGE_NAME}/g, name)
     .replace(/\${PAGE_CONTENT}/g, content);
 const run = () => __awaiter(void 0, void 0, void 0, function* () {
-    return yield new Promise((resolve, reject) => {
+    const roamUsername = core_1.getInput("roam_username");
+    const roamPassword = core_1.getInput("roam_password");
+    const roamGraph = core_1.getInput("roam_graph");
+    core_1.info(`Hello ${roamUsername}! Fetching from ${roamGraph}...`);
+    return puppeteer_1.default
+        .launch(process.env.NODE_ENV === "test"
+        ? {}
+        : {
+            executablePath: "/usr/bin/google-chrome-stable",
+        })
+        .then((browser) => __awaiter(void 0, void 0, void 0, function* () {
+        const page = yield browser.newPage();
         try {
-            const roamUsername = core_1.getInput("roam_username");
-            const roamPassword = core_1.getInput("roam_password");
-            const roamGraph = core_1.getInput("roam_graph");
-            core_1.info(`Hello ${roamUsername}! Fetching from ${roamGraph}...`);
-            return puppeteer_1.default
-                .launch(process.env.NODE_ENV === "test"
-                ? {}
-                : {
-                    executablePath: "/usr/bin/google-chrome-stable",
-                })
-                .then((browser) => __awaiter(void 0, void 0, void 0, function* () {
-                const page = yield browser.newPage();
-                try {
-                    const downloadPath = path_1.default.join(process.cwd(), "downloads");
-                    const outputPath = path_1.default.join(process.cwd(), "out");
-                    fs_1.default.mkdirSync(downloadPath, { recursive: true });
-                    fs_1.default.mkdirSync(outputPath, { recursive: true });
-                    const cdp = yield page.target().createCDPSession();
-                    cdp.send("Page.setDownloadBehavior", {
-                        behavior: "allow",
-                        downloadPath,
-                    });
-                    yield page.goto("https://roamresearch.com/#/signin", {
-                        waitUntil: "networkidle0",
-                    });
-                    yield page.type("input[name=email]", roamUsername);
-                    yield page.type("input[name=password]", roamPassword);
-                    yield page.click("button.bp3-button");
-                    core_1.info(`Signing in ${new Date().toLocaleTimeString()}`);
-                    yield page.waitForSelector(`a[href="#/app/${roamGraph}"]`, {
-                        timeout: 120000,
-                    });
-                    yield page.click(`a[href="#/app/${roamGraph}"]`);
-                    core_1.info(`entering graph ${new Date().toLocaleTimeString()}`);
-                    yield page.waitForSelector("span.bp3-icon-more", {
-                        timeout: 120000,
-                    });
-                    yield page.click(`span.bp3-icon-more`);
-                    yield page.waitForXPath("//div[text()='Export All']", {
-                        timeout: 120000,
-                    });
-                    const [exporter] = yield page.$x("//div[text()='Export All']");
-                    yield exporter.click();
-                    yield page.waitForSelector(".bp3-intent-primary");
-                    yield page.click(".bp3-intent-primary");
-                    core_1.info(`exporting ${new Date().toLocaleTimeString()}`);
-                    const zipPath = yield new Promise((res) => {
-                        const watcher = node_watch_1.default(downloadPath, { filter: /\.zip$/ }, (eventType, filename) => {
-                            if (eventType == "update" && filename) {
-                                watcher.close();
-                                res(filename);
-                            }
-                        });
-                    });
-                    core_1.info(`done waiting ${new Date().toLocaleTimeString()}`);
-                    yield browser.close();
-                    const data = yield fs_1.default.readFileSync(zipPath);
-                    const zip = yield jszip_1.default.loadAsync(data);
-                    const configPage = zip.files[`${CONFIG_PAGE_NAME}.md`];
-                    const config = Object.assign(Object.assign({}, defaultConfig), (yield (configPage
-                        ? getConfigFromPage(configPage)
-                        : Promise.resolve({}))));
-                    const pages = {};
-                    yield Promise.all(Object.keys(zip.files)
-                        .filter(config.titleFilter)
-                        .map((k) => __awaiter(void 0, void 0, void 0, function* () {
-                        const content = yield zip.files[k].async("text");
-                        if (config.contentFilter(content)) {
-                            pages[k] = content;
-                        }
-                    })));
-                    const pageNames = Object.keys(pages).map(convertPageToName);
-                    core_1.info(`resolving ${pageNames.length} pages`);
-                    core_1.info(`Here are some: ${pageNames.slice(0, 5)}`);
-                    Object.keys(pages).map((p) => {
-                        const preMarked = prepareContent({
-                            content: pages[p],
-                            pageNames,
-                            index: config.index,
-                        });
-                        const content = marked_1.default(preMarked);
-                        const name = convertPageToName(p);
-                        const hydratedHtml = hydrateHTML({
-                            name,
-                            content,
-                            template: config.template,
-                        });
-                        const htmlFileName = convertPageToHtml({
-                            name,
-                            index: config.index,
-                        });
-                        fs_1.default.writeFileSync(path_1.default.join(outputPath, htmlFileName), hydratedHtml);
-                    });
-                    return resolve();
-                }
-                catch (e) {
-                    yield page.screenshot({ path: "error.png" });
-                    core_1.error("took screenshot");
-                    return reject(e);
-                }
-            }))
-                .catch((e) => {
-                core_1.error(e.message);
-                return reject(e);
+            const downloadPath = path_1.default.join(process.cwd(), "downloads");
+            const outputPath = path_1.default.join(process.cwd(), "out");
+            fs_1.default.mkdirSync(downloadPath, { recursive: true });
+            fs_1.default.mkdirSync(outputPath, { recursive: true });
+            const cdp = yield page.target().createCDPSession();
+            cdp.send("Page.setDownloadBehavior", {
+                behavior: "allow",
+                downloadPath,
             });
+            yield page.goto("https://roamresearch.com/#/signin", {
+                waitUntil: "networkidle0",
+            });
+            yield page.type("input[name=email]", roamUsername);
+            yield page.type("input[name=password]", roamPassword);
+            yield page.click("button.bp3-button");
+            core_1.info(`Signing in ${new Date().toLocaleTimeString()}`);
+            yield page.waitForSelector(`a[href="#/app/${roamGraph}"]`, {
+                timeout: 120000,
+            });
+            yield page.click(`a[href="#/app/${roamGraph}"]`);
+            core_1.info(`entering graph ${new Date().toLocaleTimeString()}`);
+            yield page.waitForSelector("span.bp3-icon-more", {
+                timeout: 120000,
+            });
+            yield page.click(`span.bp3-icon-more`);
+            yield page.waitForXPath("//div[text()='Export All']", {
+                timeout: 120000,
+            });
+            const [exporter] = yield page.$x("//div[text()='Export All']");
+            yield exporter.click();
+            yield page.waitForSelector(".bp3-intent-primary");
+            yield page.click(".bp3-intent-primary");
+            core_1.info(`exporting ${new Date().toLocaleTimeString()}`);
+            const zipPath = yield new Promise((res) => {
+                const watcher = node_watch_1.default(downloadPath, { filter: /\.zip$/ }, (eventType, filename) => {
+                    if (eventType == "update" && filename) {
+                        watcher.close();
+                        res(filename);
+                    }
+                });
+            });
+            core_1.info(`done waiting ${new Date().toLocaleTimeString()}`);
+            yield page.close();
+            yield browser.close();
+            const data = yield fs_1.default.readFileSync(zipPath);
+            const zip = yield jszip_1.default.loadAsync(data);
+            const configPage = zip.files[`${CONFIG_PAGE_NAME}.md`];
+            const config = Object.assign(Object.assign({}, exports.defaultConfig), (yield (configPage
+                ? getConfigFromPage(configPage)
+                : Promise.resolve({}))));
+            const pages = {};
+            yield Promise.all(Object.keys(zip.files)
+                .filter(config.titleFilter)
+                .map((k) => __awaiter(void 0, void 0, void 0, function* () {
+                const content = yield zip.files[k].async("text");
+                if (config.contentFilter(content)) {
+                    pages[k] = content;
+                }
+            })));
+            const pageNames = Object.keys(pages).map(convertPageToName);
+            core_1.info(`resolving ${pageNames.length} pages`);
+            core_1.info(`Here are some: ${pageNames.slice(0, 5)}`);
+            Object.keys(pages).map((p) => {
+                if (process.env.NODE_ENV === "test") {
+                    try {
+                        fs_1.default.writeFileSync(path_1.default.join(outputPath, p), pages[p]);
+                    }
+                    catch (_a) {
+                        console.warn("failed to output md for", p);
+                    }
+                }
+                exports.renderHtmlFromPage({
+                    outputPath,
+                    config,
+                    pageContent: pages[p],
+                    p,
+                    pageNames,
+                });
+            });
+            return;
         }
-        catch (error) {
-            core_1.info("catching error...");
-            return reject(error);
+        catch (e) {
+            yield page.screenshot({ path: "error.png" });
+            core_1.error("took screenshot");
+            throw new Error(e);
         }
+    }))
+        .catch((e) => {
+        core_1.error(e.message);
+        throw new Error(e);
     });
 });
 exports.run = run;
