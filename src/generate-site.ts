@@ -148,6 +148,7 @@ const prepareContent = ({
 }) => {
   let ignoreIndent = -1;
   let codeBlockIndent = -1;
+  const pageViewedAsDocument = !content.startsWith("- ");
   const filteredContent = content
     .split("\n")
     .filter((l) => {
@@ -166,22 +167,33 @@ const prepareContent = ({
       ignoreIndent = -1;
       return true;
     })
-    .map((s) => {
-      if (s.trim().startsWith('- ')) {
+    .map((s, i) => {
+      if (s.trimStart().startsWith("- ")) {
         const numSpaces = s.search(/\S/);
+        const normalizeS = pageViewedAsDocument ? s.substring(4) : s;
         const text = s.substring(numSpaces + 2);
-        if (text.startsWith('```')) {
+        if (text.startsWith("```")) {
           codeBlockIndent = numSpaces / 4;
-          return `${s.substring(0, s.length - text.length)}\n`;
+          return `${normalizeS.substring(
+            0,
+            normalizeS.length - text.length
+          )}\n`;
         }
-        return s;
+        return normalizeS;
       }
       if (codeBlockIndent > -1) {
-        const indent = "".padStart((codeBlockIndent + 2) * 4, ' ')
-        const line = s.endsWith('```') ? s.substring(0, s.length- 3) : s;
-        return `${indent}${line}`;
+        const indent = "".padStart((codeBlockIndent + 2) * 4, " ");
+        if (s.endsWith("```")) {
+          codeBlockIndent = -1;
+          return `${indent}${s.substring(0, s.length - 3)}`;
+        }
+        return `${indent}${s}`;
       }
-      return `${s}\n`;
+      if (s.startsWith("```")) {
+        codeBlockIndent = 0;
+        return '';
+      }
+      return i > 0 ? `\n${s}` : s;
     })
     .join("\n");
 
@@ -209,7 +221,7 @@ export const renderHtmlFromPage = ({
   pageContent: string;
   p: string;
   config: Config;
-  pageNames: string[]
+  pageNames: string[];
 }): void => {
   const preMarked = prepareContent({
     content: pageContent,
@@ -337,7 +349,7 @@ export const run = async (): Promise<void> => {
         Object.keys(pages).map((p) => {
           if (process.env.NODE_ENV === "test") {
             try {
-              fs.writeFileSync(path.join(outputPath, p), pages[p]);
+              fs.writeFileSync(path.join(outputPath, encodeURIComponent(p)), pages[p]);
             } catch {
               console.warn("failed to output md for", p);
             }
