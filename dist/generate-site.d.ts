@@ -1,13 +1,14 @@
 declare type Config = {
     index: string;
     titleFilter: (title: string) => boolean;
-    contentFilter: (content: string) => boolean;
+    contentFilter: (content: string) => string;
     template: string;
 };
 export declare const defaultConfig: {
     index: string;
     titleFilter: (title: string) => boolean;
-    contentFilter: () => boolean;
+    contentFilter: (c: string) => string;
+    removeTag: boolean;
     template: string;
 };
 export declare const renderHtmlFromPage: ({ outputPath, pageContent, p, config, pageNames, }: {
