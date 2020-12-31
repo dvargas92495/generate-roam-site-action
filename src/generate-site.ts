@@ -15,7 +15,7 @@ type Config = {
     template: string;
 };
 
-const extractTag = (tag: string): string =>
+const extractTag = (tag: string) =>
     tag.startsWith("#[[") && tag.endsWith("]]")
         ? tag.substring(3, tag.length - 2)
         : tag.startsWith("[[") && tag.endsWith("]]")
