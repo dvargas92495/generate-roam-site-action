@@ -259,17 +259,15 @@ const hydrateHTML = ({
     .replace(/\${PAGE_CONTENT}/g, content);
 
 export const run = async (): Promise<void> => {
-
-  const test = process.env.NODE_ENV === "test"   
-  const roamUsername: string = test? process.env.ROAMRESEARCH_USERNAME as string : getInput("roam_username");
-  const roamPassword: string = test? process.env.ROAMRESEARCH_PASSWORD as string : getInput("roam_password");
-  const roamGraph: string = test? process.env.ROAMRESEARCH_GRAPH as string: getInput("roam_graph");
+  const roamUsername = getInput("roam_username");
+  const roamPassword = getInput("roam_password");
+  const roamGraph = getInput("roam_graph");
 
   info(`Hello ${roamUsername}! Fetching from ${roamGraph}...`);
 
   return puppeteer
     .launch(
-      test
+      process.env.NODE_ENV === "test"
         ? {}
         : {
             executablePath: "/usr/bin/google-chrome-stable",
