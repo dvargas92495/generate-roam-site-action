@@ -50017,7 +50017,7 @@ const prepareContent = ({ content, pageNames, index, }) => {
     const hashOrs = pageNames.filter((p) => !p.includes(" "));
     return filteredContent
         .replace(new RegExp(`#?\\[\\[(${pageNameOrs})\\]\\]`, "g"), (_, name) => `[${name}](/${convertPageToHtml({ name, index })})`)
-        .replace(new RegExp(`#(${hashOrs})`, "g"), (_, name) => `[${name}](/${convertPageToHtml({ name, index })})`).replace(new RegExp('\\[\\[|\\]\\]', 'g'), '');
+        .replace(new RegExp(`#(${hashOrs})`, "g"), (_, name) => `[${name}](/${convertPageToHtml({ name, index })})`).replace(new RegExp('#\\[\\[|\\[\\[|\\]\\]', 'g'), '');
 };
 const renderHtmlFromPage = ({ outputPath, pageContent, p, config, pageNames, }) => {
     const preMarked = prepareContent({

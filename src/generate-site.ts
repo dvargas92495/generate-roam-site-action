@@ -208,7 +208,7 @@ const prepareContent = ({
       new RegExp(`#(${hashOrs})`, "g"),
       (_, name) => `[${name}](/${convertPageToHtml({ name, index })})`
     ).replace(
-      new RegExp('\\[\\[|\\]\\]', 'g'), 
+      new RegExp('#\\[\\[|\\[\\[|\\]\\]', 'g'), 
       ''
     )
 };
