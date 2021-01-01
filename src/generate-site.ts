@@ -207,7 +207,10 @@ const prepareContent = ({
     .replace(
       new RegExp(`#(${hashOrs})`, "g"),
       (_, name) => `[${name}](/${convertPageToHtml({ name, index })})`
-    );
+    ).replace(
+      new RegExp('#\\[\\[|\\[\\[|\\]\\]', 'g'), 
+      ''
+    )
 };
 
 export const renderHtmlFromPage = ({
@@ -259,6 +262,7 @@ export const run = async (): Promise<void> => {
   const roamUsername = getInput("roam_username");
   const roamPassword = getInput("roam_password");
   const roamGraph = getInput("roam_graph");
+
   info(`Hello ${roamUsername}! Fetching from ${roamGraph}...`);
 
   return puppeteer
