@@ -269,7 +269,7 @@ export const run = async (): Promise<void> => {
 
   return puppeteer
     .launch(
-      process.env.NODE_ENV === "test"
+      test
         ? {}
         : {
             executablePath: "/usr/bin/google-chrome-stable",
