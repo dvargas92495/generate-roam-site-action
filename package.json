@@ -17,13 +17,12 @@
     "@actions/core": "^1.2.6",
     "@actions/github": "^4.0.0",
     "jszip": "^3.5.0",
-    "marked": "^1.2.7",
     "node-watch": "^0.7.1",
-    "puppeteer": "^5.4.0"
+    "puppeteer": "^5.4.0",
+    "roam-marked": "^0.2.2"
   },
   "devDependencies": {
     "@types/jest": "^26.0.19",
-    "@types/marked": "^1.2.1",
     "@types/puppeteer": "^5.4.2",
     "@typescript-eslint/eslint-plugin": "^4.10.0",
     "@typescript-eslint/parser": "^4.10.0",

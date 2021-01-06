@@ -19,7 +19,7 @@ A GitHub action for generating a static site from a Roam Graph.
 ## Usage
 
 ```yaml
-uses: dvargas92495/generate-roam-site-action@1.8.2
+uses: dvargas92495/generate-roam-site-action@1.8.3
 with:
     roam_username: dvargas92495@gmail.com
     roam_password: ${{ secrets.ROAM_PASSWORD }}
@@ -42,6 +42,13 @@ Most other configuration happens from your Roam DB, on a page called `roam/js/pu
 <head>
 <meta charset="utf-8"/>
 <title>${PAGE_NAME}</title>
+<style>
+.rm-highlight {
+  background-color: hsl(51, 98%, 81%);
+  margin: -2px;
+  padding: 2px;
+}
+</style>
 </head>
 <body>
 <div id="content">

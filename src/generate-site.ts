@@ -4,7 +4,7 @@ import path from "path";
 import watch from "node-watch";
 import fs from "fs";
 import jszip from "jszip";
-import marked from "marked";
+import marked from "roam-marked";
 
 const CONFIG_PAGE_NAME = "roam/js/public-garden";
 
@@ -33,6 +33,13 @@ export const defaultConfig = {
 <head>
 <meta charset="utf-8"/>
 <title>$\{PAGE_NAME}</title>
+<style>
+.rm-highlight {
+  background-color: hsl(51, 98%, 81%);
+  margin: -2px;
+  padding: 2px;
+}
+</style>
 </head>
 <body>
 <div id="content">
@@ -288,6 +295,9 @@ export const run = async (): Promise<void> => {
 
         await page.goto("https://roamresearch.com/#/signin", {
           waitUntil: "networkidle0",
+        });
+        await page.waitForSelector("input[name=email]", {
+          timeout: 120000,
         });
         await page.type("input[name=email]", roamUsername);
         await page.type("input[name=password]", roamPassword);
