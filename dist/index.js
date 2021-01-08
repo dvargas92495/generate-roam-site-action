@@ -52860,8 +52860,14 @@ exports.defaultConfig = {
 <div id="content">
 $\{PAGE_CONTENT}
 </div>
+<div id="references">
+<ul>
+$\{REFERENCES}
+</ul>
+</div>
 </body>
 </html>`,
+    referenceTemplate: '<li><a href="${LINK}">${REFERENCE}</a></li>',
 };
 const getTitleRuleFromNode = (n) => {
     const { text, children } = n;
@@ -52885,7 +52891,7 @@ const getContentRuleFromNode = (n) => {
     }
 };
 const getConfigFromPage = (page) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c;
+    var _a, _b;
     const content = yield page.async("text");
     const contentParts = content.split("\n");
     const parsedTree = [];
@@ -52919,12 +52925,15 @@ const getConfigFromPage = (page) => __awaiter(void 0, void 0, void 0, function* 
     const indexNode = getConfigNode("index");
     const filterNode = getConfigNode("filter");
     const templateNode = getConfigNode("template");
-    const template = (_a = ((templateNode === null || templateNode === void 0 ? void 0 : templateNode.children) || [])
+    const referenceTemplateNode = getConfigNode("reference template");
+    const getCode = (node) => { var _a; return (_a = ((node === null || node === void 0 ? void 0 : node.children) || [])
         .map((s) => s.text.match(new RegExp("```html\n(.*)```", "s")))
-        .find((s) => !!s)) === null || _a === void 0 ? void 0 : _a[1];
-    const withIndex = ((_b = indexNode === null || indexNode === void 0 ? void 0 : indexNode.children) === null || _b === void 0 ? void 0 : _b.length) ? { index: extractTag(indexNode.children[0].text.trim()) }
+        .find((s) => !!s)) === null || _a === void 0 ? void 0 : _a[1]; };
+    const template = getCode(templateNode);
+    const referenceTemplate = getCode(referenceTemplateNode);
+    const withIndex = ((_a = indexNode === null || indexNode === void 0 ? void 0 : indexNode.children) === null || _a === void 0 ? void 0 : _a.length) ? { index: extractTag(indexNode.children[0].text.trim()) }
         : {};
-    const withFilter = ((_c = filterNode === null || filterNode === void 0 ? void 0 : filterNode.children) === null || _c === void 0 ? void 0 : _c.length) ? {
+    const withFilter = ((_b = filterNode === null || filterNode === void 0 ? void 0 : filterNode.children) === null || _b === void 0 ? void 0 : _b.length) ? {
         titleFilter: (t) => t === withIndex.index ||
             filterNode.children.map(getTitleRuleFromNode).some((r) => r(t)),
         contentFilter: (c) => filterNode.children.map(getContentRuleFromNode).some((r) => r(c)),
@@ -52935,7 +52944,10 @@ const getConfigFromPage = (page) => __awaiter(void 0, void 0, void 0, function* 
             template,
         }
         : {};
-    return Object.assign(Object.assign(Object.assign({}, withIndex), withFilter), withTemplate);
+    const withReferenceTemplate = referenceTemplate
+        ? { referenceTemplate }
+        : {};
+    return Object.assign(Object.assign(Object.assign(Object.assign({}, withIndex), withFilter), withTemplate), withReferenceTemplate);
 });
 const convertPageToName = (p) => p.substring(0, p.length - ".md".length);
 const convertPageToHtml = ({ name, index }) => name === index
@@ -52997,18 +53009,23 @@ const prepareContent = ({ content, pageNames, index, }) => {
         .replace(new RegExp("#\\[\\[|\\[\\[|\\]\\]", "g"), "");
 };
 const renderHtmlFromPage = ({ outputPath, pageContent, p, config, pageNames, }) => {
+    const { content, references } = pageContent;
     const preMarked = prepareContent({
-        content: pageContent,
+        content,
         pageNames,
         index: config.index,
     });
-    const content = roam_marked_1.default(preMarked);
+    const markedContent = roam_marked_1.default(preMarked);
     const name = convertPageToName(p);
-    const hydratedHtml = hydrateHTML({
-        name,
-        content,
-        template: config.template,
-    });
+    const hydratedHtml = config.template
+        .replace(/\${PAGE_NAME}/g, name)
+        .replace(/\${PAGE_CONTENT}/g, markedContent)
+        .replace(/\${REFERENCES}/, references
+        .map((r) => config.referenceTemplate.replace(/\${REFERENCE}/, r).replace(/\${LINK}/, convertPageToHtml({
+        name: r,
+        index: config.index,
+    })))
+        .join("\n"));
     const htmlFileName = convertPageToHtml({
         name,
         index: config.index,
@@ -53016,9 +53033,6 @@ const renderHtmlFromPage = ({ outputPath, pageContent, p, config, pageNames, }) 
     fs_1.default.writeFileSync(path_1.default.join(outputPath, htmlFileName), hydratedHtml);
 };
 exports.renderHtmlFromPage = renderHtmlFromPage;
-const hydrateHTML = ({ name, content, template, }) => template
-    .replace(/\${PAGE_NAME}/g, name)
-    .replace(/\${PAGE_CONTENT}/g, content);
 const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.log, error: console.error }, }) => __awaiter(void 0, void 0, void 0, function* () {
     const { info, error } = logger;
     info(`Hello ${roamUsername}! Fetching from ${roamGraph}...`);
@@ -53055,6 +53069,7 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
             yield page.waitForSelector(`a[href="#/app/${roamGraph}"]`, {
                 timeout: 120000,
             });
+            info("Done waiting for graph to be selectable");
             yield page.click(`a[href="#/app/${roamGraph}"]`);
             info(`entering graph ${new Date().toLocaleTimeString()}`);
             yield page.waitForSelector("span.bp3-icon-more", {
@@ -53078,8 +53093,6 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
                 });
             });
             info(`done waiting ${new Date().toLocaleTimeString()}`);
-            yield page.close();
-            yield browser.close();
             const data = yield fs_1.default.readFileSync(zipPath);
             const zip = yield jszip_1.default.loadAsync(data);
             const configPage = zip.files[`${CONFIG_PAGE_NAME}.md`];
@@ -53092,16 +53105,29 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
                 .map((k) => __awaiter(void 0, void 0, void 0, function* () {
                 const content = yield zip.files[k].async("text");
                 if (config.contentFilter(content)) {
-                    pages[k] = content;
+                    const references = yield page.evaluate((pageName) => {
+                        const t = pageName.replace(/\.md$/, "");
+                        const findParentBlock = (b) => b.title
+                            ? b
+                            : findParentBlock(window.roamAlphaAPI.q(`[:find (pull ?e [*]) :where [?e :block/children ${b.id}]]`)[0][0]);
+                        const parentBlocks = window.roamAlphaAPI
+                            .q(`[:find (pull ?parentPage [*]) :where [?parentPage :block/children ?referencingBlock] [?referencingBlock :block/refs ?referencedPage] [?referencedPage :node/title "${t.replace(/"/g, '\\"')}"]]`)
+                            .filter((block) => block.length);
+                        const blocks = parentBlocks.map((b) => findParentBlock(b[0]));
+                        return Array.from(new Set(blocks.map((b) => b.title || "").filter((t) => !!t)));
+                    }, k);
+                    pages[k] = { content, references };
                 }
             })));
+            yield page.close();
+            yield browser.close();
             const pageNames = Object.keys(pages).map(convertPageToName);
             info(`resolving ${pageNames.length} pages`);
             info(`Here are some: ${pageNames.slice(0, 5)}`);
             Object.keys(pages).map((p) => {
                 if (process.env.NODE_ENV === "test") {
                     try {
-                        fs_1.default.writeFileSync(path_1.default.join(outputPath, encodeURIComponent(p)), pages[p]);
+                        fs_1.default.writeFileSync(path_1.default.join(outputPath, encodeURIComponent(p)), pages[p].content);
                     }
                     catch (_a) {
                         console.warn("failed to output md for", p);
@@ -53324,7 +53350,7 @@ module.exports = __webpack_require__(761);;
 /******/ 	var __webpack_module_cache__ = {};
 /******/ 	
 /******/ 	// The require function
-/******/ 	function __nested_webpack_require_1632849__(moduleId) {
+/******/ 	function __nested_webpack_require_1634473__(moduleId) {
 /******/ 		// Check if module is in cache
 /******/ 		if(__webpack_module_cache__[moduleId]) {
 /******/ 			return __webpack_module_cache__[moduleId].exports;
@@ -53339,7 +53365,7 @@ module.exports = __webpack_require__(761);;
 /******/ 		// Execute the module function
 /******/ 		var threw = true;
 /******/ 		try {
-/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1632849__);
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1634473__);
 /******/ 			threw = false;
 /******/ 		} finally {
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
@@ -53352,11 +53378,11 @@ module.exports = __webpack_require__(761);;
 /************************************************************************/
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
-/******/ 	__nested_webpack_require_1632849__.ab = __dirname + "/";/************************************************************************/
+/******/ 	__nested_webpack_require_1634473__.ab = __dirname + "/";/************************************************************************/
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nested_webpack_require_1632849__(6144);
+/******/ 	return __nested_webpack_require_1634473__(6144);
 /******/ })()
 ;
 
