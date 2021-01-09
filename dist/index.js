@@ -53017,7 +53017,7 @@ const prepareContent = ({ content, pageNames, index, }) => {
     const hashOrs = pageNames.filter((p) => !p.includes(" "));
     return filteredContent
         .replace(new RegExp(`#?\\[\\[(${pageNameOrs})\\]\\]`, "g"), (_, name) => `[${name}](/${convertPageToHtml({ name, index })})`)
-        .replace(new RegExp(`(${pageNameOrs})::`, "g"), (_, name) => `[${name}](/${convertPageToHtml({ name, index })})`)
+        .replace(new RegExp(`(${pageNameOrs})::`, "g"), (_, name) => `**[${name}:](/${convertPageToHtml({ name, index })})**`)
         .replace(new RegExp(`#(${hashOrs})`, "g"), (_, name) => `[${name}](/${convertPageToHtml({ name, index })})`)
         .replace(new RegExp("#\\[\\[|\\[\\[|\\]\\]", "g"), "");
 };
@@ -53120,7 +53120,7 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
                 .map((k) => __awaiter(void 0, void 0, void 0, function* () {
                 const content = yield zip.files[k].async("text");
                 const pageName = convertPageToName(k);
-                if (config.contentFilter(content)) {
+                if (pageName === config.index || config.contentFilter(content)) {
                     const references = yield page.evaluate((pageName) => {
                         const findParentBlock = (b) => b.title
                             ? b
@@ -53130,7 +53130,7 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
                             .filter((block) => block.length);
                         const blocks = parentBlocks.map((b) => findParentBlock(b[0]));
                         return Array.from(new Set(blocks.map((b) => b.title || "").filter((t) => !!t)));
-                    }, k);
+                    }, pageName);
                     const titleMatch = content.match("roam/js/public-garden/title::(.*)\n");
                     const headMatch = content.match(new RegExp(/roam\/js\/public-garden\/head::\s*- ```html\n(.*)```/, "s"));
                     const title = titleMatch ? titleMatch[1].trim() : pageName;
@@ -53369,7 +53369,7 @@ module.exports = __webpack_require__(761);;
 /******/ 	var __webpack_module_cache__ = {};
 /******/ 	
 /******/ 	// The require function
-/******/ 	function __nested_webpack_require_1635458__(moduleId) {
+/******/ 	function __nested_webpack_require_1635499__(moduleId) {
 /******/ 		// Check if module is in cache
 /******/ 		if(__webpack_module_cache__[moduleId]) {
 /******/ 			return __webpack_module_cache__[moduleId].exports;
@@ -53384,7 +53384,7 @@ module.exports = __webpack_require__(761);;
 /******/ 		// Execute the module function
 /******/ 		var threw = true;
 /******/ 		try {
-/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1635458__);
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1635499__);
 /******/ 			threw = false;
 /******/ 		} finally {
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
@@ -53397,11 +53397,11 @@ module.exports = __webpack_require__(761);;
 /************************************************************************/
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
-/******/ 	__nested_webpack_require_1635458__.ab = __dirname + "/";/************************************************************************/
+/******/ 	__nested_webpack_require_1635499__.ab = __dirname + "/";/************************************************************************/
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nested_webpack_require_1635458__(6144);
+/******/ 	return __nested_webpack_require_1635499__(6144);
 /******/ })()
 ;
 
