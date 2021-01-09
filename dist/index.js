@@ -53034,9 +53034,9 @@ const renderHtmlFromPage = ({ outputPath, pageContent, p, config, pageNames, }) 
         .replace("</head>", `${head}</head>`)
         .replace(/\${PAGE_NAME}/g, title)
         .replace(/\${PAGE_CONTENT}/g, markedContent)
-        .replace(/\${REFERENCES}/, references
+        .replace(/\${REFERENCES}/g, references
         .filter((r) => pageNameSet.has(r))
-        .map((r) => config.referenceTemplate.replace(/\${REFERENCE}/, r).replace(/\${LINK}/, convertPageToHtml({
+        .map((r) => config.referenceTemplate.replace(/\${REFERENCE}/g, r).replace(/\${LINK}/g, convertPageToHtml({
         name: r,
         index: config.index,
     })))
@@ -53369,7 +53369,7 @@ module.exports = __webpack_require__(761);;
 /******/ 	var __webpack_module_cache__ = {};
 /******/ 	
 /******/ 	// The require function
-/******/ 	function __nested_webpack_require_1635499__(moduleId) {
+/******/ 	function __nested_webpack_require_1635502__(moduleId) {
 /******/ 		// Check if module is in cache
 /******/ 		if(__webpack_module_cache__[moduleId]) {
 /******/ 			return __webpack_module_cache__[moduleId].exports;
@@ -53384,7 +53384,7 @@ module.exports = __webpack_require__(761);;
 /******/ 		// Execute the module function
 /******/ 		var threw = true;
 /******/ 		try {
-/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1635499__);
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1635502__);
 /******/ 			threw = false;
 /******/ 		} finally {
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
@@ -53397,11 +53397,11 @@ module.exports = __webpack_require__(761);;
 /************************************************************************/
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
-/******/ 	__nested_webpack_require_1635499__.ab = __dirname + "/";/************************************************************************/
+/******/ 	__nested_webpack_require_1635502__.ab = __dirname + "/";/************************************************************************/
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nested_webpack_require_1635499__(6144);
+/******/ 	return __nested_webpack_require_1635502__(6144);
 /******/ })()
 ;
 
