@@ -44842,7 +44842,7 @@ const getConfigFromPage = ({ page, configPage, }) => __awaiter(void 0, void 0, v
 const convertPageToHtml = ({ name, index }) => name === index
     ? "index.html"
     : `${encodeURIComponent(name.replace(/ /g, "_").replace(/[",?#:$;/@&=+']/g, ""))}.html`;
-const prepareContent = ({ content, pageNames, index, }) => {
+const prepareContent = ({ content, index, }) => {
     const filterIgnore = (t) => {
         if (IGNORE_BLOCKS.includes(extractTag(t.text.trim()))) {
             return false;
@@ -44851,13 +44851,11 @@ const prepareContent = ({ content, pageNames, index, }) => {
         return true;
     };
     const filteredContent = content.filter(filterIgnore);
-    const pageNameOrs = pageNames.join("|");
-    const hashOrs = pageNames.filter((p) => !p.includes(" "));
     const convertLinks = (t) => {
         t.text = t.text
-            .replace(new RegExp(`#?\\[\\[(${pageNameOrs})\\]\\]`, "g"), (_, name) => `[${name}](/${convertPageToHtml({ name, index }).replace(/^index\.html$/, "")})`)
-            .replace(new RegExp(`(${pageNameOrs})::`, "g"), (_, name) => `**[${name}:](/${convertPageToHtml({ name, index }).replace(/^index\.html$/, "")})**`)
-            .replace(new RegExp(`#(${hashOrs})`, "g"), (_, name) => `[${name}](/${convertPageToHtml({ name, index }).replace(/^index\.html$/, "")})`)
+            .replace(new RegExp(`#?\\[\\[([^\\]]*)\\]\\]`, "g"), (_, name) => `[${name}](/${convertPageToHtml({ name, index }).replace(/^index\.html$/, "")})`)
+            .replace(new RegExp(`(.*)::`, "g"), (_, name) => `**[${name}:](/${convertPageToHtml({ name, index }).replace(/^index\.html$/, "")})**`)
+            .replace(new RegExp(/#([0-9a-zA-Z\-_/\\]*)/, "g"), (_, name) => `[${name}](/${convertPageToHtml({ name, index }).replace(/^index\.html$/, "")})`)
             .replace(new RegExp("#\\[\\[|\\[\\[|\\]\\]", "g"), "");
         t.children.forEach(convertLinks);
         if (t.heading > 0) {
@@ -44892,7 +44890,6 @@ const renderHtmlFromPage = ({ outputPath, pageContent, p, config, pageNames, }) 
     const { content, references, title, head } = pageContent;
     const preparedContent = prepareContent({
         content,
-        pageNames,
         index: config.index,
     });
     const pageNameSet = new Set(pageNames);
@@ -45318,7 +45315,7 @@ module.exports = __webpack_require__(761);;
 /******/ 	var __webpack_module_cache__ = {};
 /******/ 	
 /******/ 	// The require function
-/******/ 	function __nested_webpack_require_1375091__(moduleId) {
+/******/ 	function __nested_webpack_require_1374942__(moduleId) {
 /******/ 		// Check if module is in cache
 /******/ 		if(__webpack_module_cache__[moduleId]) {
 /******/ 			return __webpack_module_cache__[moduleId].exports;
@@ -45333,7 +45330,7 @@ module.exports = __webpack_require__(761);;
 /******/ 		// Execute the module function
 /******/ 		var threw = true;
 /******/ 		try {
-/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1375091__);
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1374942__);
 /******/ 			threw = false;
 /******/ 		} finally {
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
@@ -45346,11 +45343,11 @@ module.exports = __webpack_require__(761);;
 /************************************************************************/
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
-/******/ 	__nested_webpack_require_1375091__.ab = __dirname + "/";/************************************************************************/
+/******/ 	__nested_webpack_require_1374942__.ab = __dirname + "/";/************************************************************************/
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nested_webpack_require_1375091__(6144);
+/******/ 	return __nested_webpack_require_1374942__(6144);
 /******/ })()
 ;
 
