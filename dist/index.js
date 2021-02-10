@@ -44733,8 +44733,12 @@ const roam_marked_1 = __importDefault(__nested_webpack_require_1353750__(8480));
 const CONFIG_PAGE_NAMES = ["roam/js/static-site", "roam/js/public-garden"];
 const IGNORE_BLOCKS = CONFIG_PAGE_NAMES.map((c) => `${c}/ignore`);
 const TITLE_REGEX = new RegExp(`(?:${CONFIG_PAGE_NAMES.map((c) => `${c.replace("/", "\\/")}/title`).join("|")})::(.*)`);
-const HEAD_REGEX = new RegExp(`(?:${CONFIG_PAGE_NAMES.map((c) => `${c.replace("/", "\\/")}}/head`).join("|")})::`);
+const HEAD_REGEX = new RegExp(`(?:${CONFIG_PAGE_NAMES.map((c) => `${c.replace("/", "\\/")}/head`).join("|")})::`);
 const HTML_REGEX = new RegExp("```html\n(.*)```", "s");
+const allBlockMapper = (t) => [
+    t,
+    ...t.children.flatMap(allBlockMapper),
+];
 const extractTag = (tag) => tag.startsWith("#[[") && tag.endsWith("]]")
     ? tag.substring(3, tag.length - 2)
     : tag.startsWith("[[") && tag.endsWith("]]")
@@ -44947,6 +44951,8 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
             yield page.goto("https://roamresearch.com/#/signin?disablejs=true", {
                 waitUntil: "networkidle0",
             });
+            // Roam's doing this weird refresh thing. let's just hardcode it
+            yield page.waitForTimeout(5000);
             yield page.waitForSelector("input[name=email]", {
                 timeout: 120000,
             });
@@ -45040,9 +45046,10 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
                         console.error("Failed to fetch view type for page", pageName);
                         throw new Error(e);
                     });
-                    const titleMatch = (_e = (_d = (_c = content
+                    const allBlocks = content.flatMap(allBlockMapper);
+                    const titleMatch = (_e = (_d = (_c = allBlocks
                         .find((s) => TITLE_REGEX.test(s.text))) === null || _c === void 0 ? void 0 : _c.text) === null || _d === void 0 ? void 0 : _d.match) === null || _e === void 0 ? void 0 : _e.call(_d, TITLE_REGEX);
-                    const headMatch = (_k = (_j = (_h = (_g = (_f = content
+                    const headMatch = (_k = (_j = (_h = (_g = (_f = allBlocks
                         .find((s) => HEAD_REGEX.test(s.text))) === null || _f === void 0 ? void 0 : _f.children) === null || _g === void 0 ? void 0 : _g[0]) === null || _h === void 0 ? void 0 : _h.text) === null || _j === void 0 ? void 0 : _j.match) === null || _k === void 0 ? void 0 : _k.call(_j, HTML_REGEX);
                     const title = titleMatch ? titleMatch[1].trim() : pageName;
                     const head = headMatch ? headMatch[1] : "";
@@ -45315,7 +45322,7 @@ module.exports = __webpack_require__(761);;
 /******/ 	var __webpack_module_cache__ = {};
 /******/ 	
 /******/ 	// The require function
-/******/ 	function __nested_webpack_require_1374942__(moduleId) {
+/******/ 	function __nested_webpack_require_1375223__(moduleId) {
 /******/ 		// Check if module is in cache
 /******/ 		if(__webpack_module_cache__[moduleId]) {
 /******/ 			return __webpack_module_cache__[moduleId].exports;
@@ -45330,7 +45337,7 @@ module.exports = __webpack_require__(761);;
 /******/ 		// Execute the module function
 /******/ 		var threw = true;
 /******/ 		try {
-/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1374942__);
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1375223__);
 /******/ 			threw = false;
 /******/ 		} finally {
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
@@ -45343,11 +45350,11 @@ module.exports = __webpack_require__(761);;
 /************************************************************************/
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
-/******/ 	__nested_webpack_require_1374942__.ab = __dirname + "/";/************************************************************************/
+/******/ 	__nested_webpack_require_1375223__.ab = __dirname + "/";/************************************************************************/
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nested_webpack_require_1374942__(6144);
+/******/ 	return __nested_webpack_require_1375223__(6144);
 /******/ })()
 ;
 
