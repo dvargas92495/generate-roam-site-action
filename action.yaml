@@ -10,6 +10,9 @@ inputs:
   roam_graph:
     description: 'Your Roam Graph'
     required: true
+  config_path:
+    description: 'Path to config file to override Roam configuration'
+    default: 'static_site.json'
 runs:
   using: 'node12'
   main: 'dist/index.js'

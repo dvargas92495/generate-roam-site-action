@@ -31943,7 +31943,9 @@ module.exports = class Lexer {
    * Lexing
    */
   blockTokens(src, tokens = [], top = true) {
-    src = src.replace(/^ +$/gm, '');
+    if (this.options.pedantic) {
+      src = src.replace(/^ +$/gm, '');
+    }
     let token, i, l, lastToken;
 
     while (src) {
@@ -31957,14 +31959,15 @@ module.exports = class Lexer {
       }
 
       // code
-      if (token = this.tokenizer.code(src, tokens)) {
+      if (token = this.tokenizer.code(src)) {
         src = src.substring(token.raw.length);
-        if (token.type) {
-          tokens.push(token);
-        } else {
-          lastToken = tokens[tokens.length - 1];
+        lastToken = tokens[tokens.length - 1];
+        // An indented code block cannot interrupt a paragraph.
+        if (lastToken && lastToken.type === 'paragraph') {
           lastToken.raw += '\n' + token.raw;
           lastToken.text += '\n' + token.text;
+        } else {
+          tokens.push(token);
         }
         continue;
       }
@@ -32057,14 +32060,14 @@ module.exports = class Lexer {
       }
 
       // text
-      if (token = this.tokenizer.text(src, tokens)) {
+      if (token = this.tokenizer.text(src)) {
         src = src.substring(token.raw.length);
-        if (token.type) {
-          tokens.push(token);
-        } else {
-          lastToken = tokens[tokens.length - 1];
+        lastToken = tokens[tokens.length - 1];
+        if (lastToken && lastToken.type === 'text') {
           lastToken.raw += '\n' + token.raw;
           lastToken.text += '\n' + token.text;
+        } else {
+          tokens.push(token);
         }
         continue;
       }
@@ -32152,7 +32155,7 @@ module.exports = class Lexer {
    * Lexing/Compiling
    */
   inlineTokens(src, tokens = [], inLink = false, inRawBlock = false) {
-    let token;
+    let token, lastToken;
 
     // String with links masked to avoid interference with em and strong
     let maskedSrc = src;
@@ -32175,11 +32178,17 @@ module.exports = class Lexer {
       maskedSrc = maskedSrc.slice(0, match.index) + '[' + repeatString('a', match[0].length - 2) + ']' + maskedSrc.slice(this.tokenizer.rules.inline.blockSkip.lastIndex);
     }
 
+    // Mask out escaped em & strong delimiters
+    while ((match = this.tokenizer.rules.inline.escapedEmSt.exec(maskedSrc)) != null) {
+      maskedSrc = maskedSrc.slice(0, match.index) + '++' + maskedSrc.slice(this.tokenizer.rules.inline.escapedEmSt.lastIndex);
+    }
+
     while (src) {
       if (!keepPrevChar) {
         prevChar = '';
       }
       keepPrevChar = false;
+
       // escape
       if (token = this.tokenizer.escape(src)) {
         src = src.substring(token.raw.length);
@@ -32192,7 +32201,13 @@ module.exports = class Lexer {
         src = src.substring(token.raw.length);
         inLink = token.inLink;
         inRawBlock = token.inRawBlock;
-        tokens.push(token);
+        const lastToken = tokens[tokens.length - 1];
+        if (lastToken && token.type === 'text' && lastToken.type === 'text') {
+          lastToken.raw += token.raw;
+          lastToken.text += token.text;
+        } else {
+          tokens.push(token);
+        }
         continue;
       }
 
@@ -32209,23 +32224,21 @@ module.exports = class Lexer {
       // reflink, nolink
       if (token = this.tokenizer.reflink(src, this.tokens.links)) {
         src = src.substring(token.raw.length);
+        const lastToken = tokens[tokens.length - 1];
         if (token.type === 'link') {
           token.tokens = this.inlineTokens(token.text, [], true, inRawBlock);
+          tokens.push(token);
+        } else if (lastToken && token.type === 'text' && lastToken.type === 'text') {
+          lastToken.raw += token.raw;
+          lastToken.text += token.text;
+        } else {
+          tokens.push(token);
         }
-        tokens.push(token);
         continue;
       }
 
-      // strong
-      if (token = this.tokenizer.strong(src, maskedSrc, prevChar)) {
-        src = src.substring(token.raw.length);
-        token.tokens = this.inlineTokens(token.text, [], inLink, inRawBlock);
-        tokens.push(token);
-        continue;
-      }
-
-      // em
-      if (token = this.tokenizer.em(src, maskedSrc, prevChar)) {
+      // em & strong
+      if (token = this.tokenizer.emStrong(src, maskedSrc, prevChar)) {
         src = src.substring(token.raw.length);
         token.tokens = this.inlineTokens(token.text, [], inLink, inRawBlock);
         tokens.push(token);
@@ -32271,9 +32284,17 @@ module.exports = class Lexer {
       // text
       if (token = this.tokenizer.inlineText(src, inRawBlock, smartypants)) {
         src = src.substring(token.raw.length);
-        prevChar = token.raw.slice(-1);
+        if (token.raw.slice(-1) !== '_') { // Track prevChar before string of ____ started
+          prevChar = token.raw.slice(-1);
+        }
         keepPrevChar = true;
-        tokens.push(token);
+        lastToken = tokens[tokens.length - 1];
+        if (lastToken && lastToken.type === 'text') {
+          lastToken.raw += token.raw;
+          lastToken.text += token.text;
+        } else {
+          tokens.push(token);
+        }
         continue;
       }
 
@@ -32296,15 +32317,15 @@ module.exports = class Lexer {
 /***/ }),
 
 /***/ 887:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_11908__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_12901__) => {
 
-const Renderer = __nested_webpack_require_11908__(547);
-const TextRenderer = __nested_webpack_require_11908__(381);
-const Slugger = __nested_webpack_require_11908__(439);
-const { defaults } = __nested_webpack_require_11908__(863);
+const Renderer = __nested_webpack_require_12901__(547);
+const TextRenderer = __nested_webpack_require_12901__(381);
+const Slugger = __nested_webpack_require_12901__(439);
+const { defaults } = __nested_webpack_require_12901__(863);
 const {
   unescape
-} = __nested_webpack_require_11908__(881);
+} = __nested_webpack_require_12901__(881);
 
 /**
  * Parsing & Compiling
@@ -32566,13 +32587,13 @@ module.exports = class Parser {
 /***/ }),
 
 /***/ 547:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_18999__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_19992__) => {
 
-const { defaults } = __nested_webpack_require_18999__(863);
+const { defaults } = __nested_webpack_require_19992__(863);
 const {
   cleanUrl,
   escape
-} = __nested_webpack_require_18999__(881);
+} = __nested_webpack_require_19992__(881);
 
 /**
  * Renderer
@@ -32591,6 +32612,8 @@ module.exports = class Renderer {
         code = out;
       }
     }
+
+    code = code.replace(/\n$/, '') + '\n';
 
     if (!lang) {
       return '<pre><code>'
@@ -32842,15 +32865,15 @@ module.exports = class TextRenderer {
 /***/ }),
 
 /***/ 721:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_24376__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_25413__) => {
 
-const { defaults } = __nested_webpack_require_24376__(863);
+const { defaults } = __nested_webpack_require_25413__(863);
 const {
   rtrim,
   splitCells,
   escape,
   findClosingBracket
-} = __nested_webpack_require_24376__(881);
+} = __nested_webpack_require_25413__(881);
 
 function outputLink(cap, link, raw) {
   const href = link.href;
@@ -32925,19 +32948,10 @@ module.exports = class Tokenizer {
     }
   }
 
-  code(src, tokens) {
+  code(src) {
     const cap = this.rules.block.code.exec(src);
     if (cap) {
-      const lastToken = tokens[tokens.length - 1];
-      // An indented code block cannot interrupt a paragraph.
-      if (lastToken && lastToken.type === 'paragraph') {
-        return {
-          raw: cap[0],
-          text: cap[0].trimRight()
-        };
-      }
-
-      const text = cap[0].replace(/^ {4}/gm, '');
+      const text = cap[0].replace(/^ {1,4}/gm, '');
       return {
         type: 'code',
         raw: cap[0],
@@ -33087,8 +33101,11 @@ module.exports = class Tokenizer {
         // Backpedal if it does not belong in this list.
         if (i !== l - 1) {
           bnext = this.rules.block.listItemStart.exec(itemMatch[i + 1]);
-
-          if (bnext[1].length > bcurr[0].length || bnext[1].length > 3) {
+          if (
+            !this.options.pedantic
+              ? bnext[1].length > bcurr[0].length || bnext[1].length > 3
+              : bnext[1].length > bcurr[1].length
+          ) {
             // nested list
             itemMatch.splice(i, 2, itemMatch[i] + '\n' + itemMatch[i + 1]);
             i--;
@@ -33253,17 +33270,9 @@ module.exports = class Tokenizer {
     }
   }
 
-  text(src, tokens) {
+  text(src) {
     const cap = this.rules.block.text.exec(src);
     if (cap) {
-      const lastToken = tokens[tokens.length - 1];
-      if (lastToken && lastToken.type === 'text') {
-        return {
-          raw: cap[0],
-          text: cap[0]
-        };
-      }
-
       return {
         type: 'text',
         raw: cap[0],
@@ -33387,46 +33396,61 @@ module.exports = class Tokenizer {
     }
   }
 
-  strong(src, maskedSrc, prevChar = '') {
-    let match = this.rules.inline.strong.start.exec(src);
+  emStrong(src, maskedSrc, prevChar = '') {
+    let match = this.rules.inline.emStrong.lDelim.exec(src);
+    if (!match) return;
 
-    if (match && (!match[1] || (match[1] && (prevChar === '' || this.rules.inline.punctuation.exec(prevChar))))) {
-      maskedSrc = maskedSrc.slice(-1 * src.length);
-      const endReg = match[0] === '**' ? this.rules.inline.strong.endAst : this.rules.inline.strong.endUnd;
+    if (match[3] && prevChar.match(/[\p{L}\p{N}]/u)) return; // _ can't be between two alphanumerics. \p{L}\p{N} includes non-english alphabet/numbers as well
 
+    const nextChar = match[1] || match[2] || '';
+
+    if (!nextChar || (nextChar && (prevChar === '' || this.rules.inline.punctuation.exec(prevChar)))) {
+      const lLength = match[0].length - 1;
+      let rDelim, rLength, delimTotal = lLength, midDelimTotal = 0;
+
+      const endReg = match[0][0] === '*' ? this.rules.inline.emStrong.rDelimAst : this.rules.inline.emStrong.rDelimUnd;
       endReg.lastIndex = 0;
 
-      let cap;
+      maskedSrc = maskedSrc.slice(-1 * src.length + lLength); // Bump maskedSrc to same section of string as src (move to lexer?)
+
       while ((match = endReg.exec(maskedSrc)) != null) {
-        cap = this.rules.inline.strong.middle.exec(maskedSrc.slice(0, match.index + 3));
-        if (cap) {
-          return {
-            type: 'strong',
-            raw: src.slice(0, cap[0].length),
-            text: src.slice(2, cap[0].length - 2)
-          };
+        rDelim = match[1] || match[2] || match[3] || match[4] || match[5] || match[6];
+
+        if (!rDelim) continue; // matched the first alternative in rules.js (skip the * in __abc*abc__)
+
+        rLength = rDelim.length;
+
+        if (match[3] || match[4]) { // found another Left Delim
+          delimTotal += rLength;
+          continue;
+        } else if (match[5] || match[6]) { // either Left or Right Delim
+          if (lLength % 3 && !((lLength + rLength) % 3)) {
+            midDelimTotal += rLength;
+            continue; // CommonMark Emphasis Rules 9-10
+          }
         }
-      }
-    }
-  }
 
-  em(src, maskedSrc, prevChar = '') {
-    let match = this.rules.inline.em.start.exec(src);
+        delimTotal -= rLength;
 
-    if (match && (!match[1] || (match[1] && (prevChar === '' || this.rules.inline.punctuation.exec(prevChar))))) {
-      maskedSrc = maskedSrc.slice(-1 * src.length);
-      const endReg = match[0] === '*' ? this.rules.inline.em.endAst : this.rules.inline.em.endUnd;
+        if (delimTotal > 0) continue; // Haven't found enough closing delimiters
 
-      endReg.lastIndex = 0;
+        // If this is the last rDelimiter, remove extra characters. *a*** -> *a*
+        if (delimTotal + midDelimTotal - rLength <= 0 && !maskedSrc.slice(endReg.lastIndex).match(endReg)) {
+          rLength = Math.min(rLength, rLength + delimTotal + midDelimTotal);
+        }
 
-      let cap;
-      while ((match = endReg.exec(maskedSrc)) != null) {
-        cap = this.rules.inline.em.middle.exec(maskedSrc.slice(0, match.index + 2));
-        if (cap) {
+        if (Math.min(lLength, rLength) % 2) {
           return {
             type: 'em',
-            raw: src.slice(0, cap[0].length),
-            text: src.slice(1, cap[0].length - 1)
+            raw: src.slice(0, lLength + match.index + rLength + 1),
+            text: src.slice(1, lLength + match.index + rLength)
+          };
+        }
+        if (Math.min(lLength, rLength) % 2 === 0) {
+          return {
+            type: 'strong',
+            raw: src.slice(0, lLength + match.index + rLength + 1),
+            text: src.slice(2, lLength + match.index + rLength - 1)
           };
         }
       }
@@ -33865,24 +33889,24 @@ module.exports = {
 /***/ }),
 
 /***/ 223:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_49048__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_50614__) => {
 
-const Lexer = __nested_webpack_require_49048__(354);
-const Parser = __nested_webpack_require_49048__(887);
-const Tokenizer = __nested_webpack_require_49048__(721);
-const Renderer = __nested_webpack_require_49048__(547);
-const TextRenderer = __nested_webpack_require_49048__(381);
-const Slugger = __nested_webpack_require_49048__(439);
+const Lexer = __nested_webpack_require_50614__(354);
+const Parser = __nested_webpack_require_50614__(887);
+const Tokenizer = __nested_webpack_require_50614__(721);
+const Renderer = __nested_webpack_require_50614__(547);
+const TextRenderer = __nested_webpack_require_50614__(381);
+const Slugger = __nested_webpack_require_50614__(439);
 const {
   merge,
   checkSanitizeDeprecation,
   escape
-} = __nested_webpack_require_49048__(881);
+} = __nested_webpack_require_50614__(881);
 const {
   getDefaults,
   changeDefaults,
   defaults
-} = __nested_webpack_require_49048__(863);
+} = __nested_webpack_require_50614__(863);
 
 /**
  * Marked
@@ -34139,20 +34163,20 @@ module.exports = marked;
 /***/ }),
 
 /***/ 770:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_55172__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_56738__) => {
 
 const {
   noopTest,
   edit,
   merge
-} = __nested_webpack_require_55172__(881);
+} = __nested_webpack_require_56738__(881);
 
 /**
  * Block-Level Grammar
  */
 const block = {
-  newline: /^\n+/,
-  code: /^( {4}[^\n]+\n*)+/,
+  newline: /^(?: *(?:\n|$))+/,
+  code: /^( {4}[^\n]+(?:\n(?: *(?:\n|$))*)?)+/,
   fences: /^ {0,3}(`{3,}(?=[^`\n]*\n)|~{3,})([^\n]*)\n(?:|([\s\S]*?)\n)(?: {0,3}\1[~`]* *(?:\n+|$)|$)/,
   hr: /^ {0,3}((?:- *){3,}|(?:_ *){3,}|(?:\* *){3,})(?:\n+|$)/,
   heading: /^ {0,3}(#{1,6})(?=\s|$)(.*)(?:\n+|$)/,
@@ -34174,7 +34198,7 @@ const block = {
   lheading: /^([^\n]+)\n {0,3}(=+|-+) *(?:\n+|$)/,
   // regex template, placeholders will be replaced according to different paragraph
   // interruption rules of commonmark and the original markdown spec:
-  _paragraph: /^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list|html)[^\n]+)*)/,
+  _paragraph: /^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list|html| +\n)[^\n]+)*)/,
   text: /^[^\n]+/
 };
 
@@ -34316,74 +34340,41 @@ const inline = {
   reflink: /^!?\[(label)\]\[(?!\s*\])((?:\\[\[\]]?|[^\[\]\\])+)\]/,
   nolink: /^!?\[(?!\s*\])((?:\[[^\[\]]*\]|\\[\[\]]|[^\[\]])*)\](?:\[\])?/,
   reflinkSearch: 'reflink|nolink(?!\\()',
-  strong: {
-    start: /^(?:(\*\*(?=[*punctuation]))|\*\*)(?![\s])|__/, // (1) returns if starts w/ punctuation
-    middle: /^\*\*(?:(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)|\*(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)*?\*)+?\*\*$|^__(?![\s])((?:(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)|_(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)*?_)+?)__$/,
-    endAst: /[^punctuation\s]\*\*(?!\*)|[punctuation]\*\*(?!\*)(?:(?=[punctuation_\s]|$))/, // last char can't be punct, or final * must also be followed by punct (or endline)
-    endUnd: /[^\s]__(?!_)(?:(?=[punctuation*\s])|$)/ // last char can't be a space, and final _ must preceed punct or \s (or endline)
-  },
-  em: {
-    start: /^(?:(\*(?=[punctuation]))|\*)(?![*\s])|_/, // (1) returns if starts w/ punctuation
-    middle: /^\*(?:(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)|\*(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)*?\*)+?\*$|^_(?![_\s])(?:(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)|_(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)*?_)+?_$/,
-    endAst: /[^punctuation\s]\*(?!\*)|[punctuation]\*(?!\*)(?:(?=[punctuation_\s]|$))/, // last char can't be punct, or final * must also be followed by punct (or endline)
-    endUnd: /[^\s]_(?!_)(?:(?=[punctuation*\s])|$)/ // last char can't be a space, and final _ must preceed punct or \s (or endline)
+  emStrong: {
+    lDelim: /^(?:\*+(?:([punct_])|[^\s*]))|^_+(?:([punct*])|([^\s_]))/,
+    //        (1) and (2) can only be a Right Delimiter. (3) and (4) can only be Left.  (5) and (6) can be either Left or Right.
+    //        () Skip other delimiter (1) #***                (2) a***#, a***                   (3) #***a, ***a                 (4) ***#              (5) #***#                 (6) a***a
+    rDelimAst: /\_\_[^_]*?\*[^_]*?\_\_|[punct_](\*+)(?=[\s]|$)|[^punct*_\s](\*+)(?=[punct_\s]|$)|[punct_\s](\*+)(?=[^punct*_\s])|[\s](\*+)(?=[punct_])|[punct_](\*+)(?=[punct_])|[^punct*_\s](\*+)(?=[^punct*_\s])/,
+    rDelimUnd: /\*\*[^*]*?\_[^*]*?\*\*|[punct*](\_+)(?=[\s]|$)|[^punct*_\s](\_+)(?=[punct*\s]|$)|[punct*\s](\_+)(?=[^punct*_\s])|[\s](\_+)(?=[punct*])|[punct*](\_+)(?=[punct*])/ // ^- Not allowed for _
   },
   code: /^(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)/,
   br: /^( {2,}|\\)\n(?!\s*$)/,
   del: noopTest,
-  text: /^(`+|[^`])(?:(?= {2,}\n)|[\s\S]*?(?:(?=[\\<!\[`*]|\b_|$)|[^ ](?= {2,}\n)))/,
-  punctuation: /^([\s*punctuation])/
+  text: /^(`+|[^`])(?:(?= {2,}\n)|[\s\S]*?(?:(?=[\\<!\[`*_]|\b_|$)|[^ ](?= {2,}\n)))/,
+  punctuation: /^([\spunctuation])/
 };
 
-// list of punctuation marks from common mark spec
-// without * and _ to workaround cases with double emphasis
+// list of punctuation marks from CommonMark spec
+// without * and _ to handle the different emphasis markers * and _
 inline._punctuation = '!"#$%&\'()+\\-.,/:;<=>?@\\[\\]`^{|}~';
 inline.punctuation = edit(inline.punctuation).replace(/punctuation/g, inline._punctuation).getRegex();
 
 // sequences em should skip over [title](link), `code`, <html>
-inline._blockSkip = '\\[[^\\]]*?\\]\\([^\\)]*?\\)|`[^`]*?`|<[^>]*?>';
-inline._overlapSkip = '__[^_]*?__|\\*\\*\\[^\\*\\]*?\\*\\*';
+inline.blockSkip = /\[[^\]]*?\]\([^\)]*?\)|`[^`]*?`|<[^>]*?>/g;
+inline.escapedEmSt = /\\\*|\\_/g;
 
 inline._comment = edit(block._comment).replace('(?:-->|$)', '-->').getRegex();
 
-inline.em.start = edit(inline.em.start)
-  .replace(/punctuation/g, inline._punctuation)
+inline.emStrong.lDelim = edit(inline.emStrong.lDelim)
+  .replace(/punct/g, inline._punctuation)
   .getRegex();
 
-inline.em.middle = edit(inline.em.middle)
-  .replace(/punctuation/g, inline._punctuation)
-  .replace(/overlapSkip/g, inline._overlapSkip)
+inline.emStrong.rDelimAst = edit(inline.emStrong.rDelimAst, 'g')
+  .replace(/punct/g, inline._punctuation)
   .getRegex();
 
-inline.em.endAst = edit(inline.em.endAst, 'g')
-  .replace(/punctuation/g, inline._punctuation)
-  .getRegex();
-
-inline.em.endUnd = edit(inline.em.endUnd, 'g')
-  .replace(/punctuation/g, inline._punctuation)
-  .getRegex();
-
-inline.strong.start = edit(inline.strong.start)
-  .replace(/punctuation/g, inline._punctuation)
-  .getRegex();
-
-inline.strong.middle = edit(inline.strong.middle)
-  .replace(/punctuation/g, inline._punctuation)
-  .replace(/overlapSkip/g, inline._overlapSkip)
-  .getRegex();
-
-inline.strong.endAst = edit(inline.strong.endAst, 'g')
-  .replace(/punctuation/g, inline._punctuation)
-  .getRegex();
-
-inline.strong.endUnd = edit(inline.strong.endUnd, 'g')
-  .replace(/punctuation/g, inline._punctuation)
-  .getRegex();
-
-inline.blockSkip = edit(inline._blockSkip, 'g')
-  .getRegex();
-
-inline.overlapSkip = edit(inline._overlapSkip, 'g')
+inline.emStrong.rDelimUnd = edit(inline.emStrong.rDelimUnd, 'g')
+  .replace(/punct/g, inline._punctuation)
   .getRegex();
 
 inline._escapes = /\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])/g;
@@ -34462,7 +34453,7 @@ inline.gfm = merge({}, inline.normal, {
   url: /^((?:ftp|https?):\/\/|www\.)(?:[a-zA-Z0-9\-]+\.?)+[^\s<]*|^email/,
   _backpedal: /(?:[^?!.,:;*_~()&]+|\([^)]*\)|&(?![a-zA-Z0-9]+;$)|[?!.,:;*_~)]+(?!$))+/,
   del: /^(~~?)(?=[^\s~])([\s\S]*?[^\s~])\1(?=[^~]|$)/,
-  text: /^([`~]+|[^`~])(?:(?= {2,}\n)|[\s\S]*?(?:(?=[\\<!\[`*~]|\b_|https?:\/\/|ftp:\/\/|www\.|$)|[^ ](?= {2,}\n)|[^a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-](?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@))|(?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@))/
+  text: /^([`~]+|[^`~])(?:(?= {2,}\n)|[\s\S]*?(?:(?=[\\<!\[`*~_]|\b_|https?:\/\/|ftp:\/\/|www\.|$)|[^ ](?= {2,}\n)|[^a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-](?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@))|(?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@))/
 });
 
 inline.gfm.url = edit(inline.gfm.url, 'i')
@@ -34489,7 +34480,7 @@ module.exports = {
 /***/ }),
 
 /***/ 144:
-/***/ (function(__unused_webpack_module, exports, __nested_webpack_require_68437__) {
+/***/ (function(__unused_webpack_module, exports, __nested_webpack_require_68754__) {
 
 "use strict";
 
@@ -34497,51 +34488,140 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.parseInline = void 0;
-const marked_1 = __importDefault(__nested_webpack_require_68437__(223));
-const boldRegex = new RegExp("\\*\\*", "g");
-const italicsRegex = new RegExp("(?:([^a-zA-Z0-9])_|^_)", "g");
-const highlightRegex = new RegExp("\\^\\^", "g");
+exports.parseInline = exports.lexer = void 0;
+const marked_1 = __importDefault(__nested_webpack_require_68754__(223));
+const RENDERED_TODO = '<span><label class="check-container"><input type="checkbox" disabled=""><span class="checkmark"></span></label></span>';
+const RENDERED_DONE = '<span><label class="check-container"><input type="checkbox" checked="" disabled=""><span class="checkmark"></span></label></span>';
+const TODO_REGEX = /^{{(?:\[\[)?TODO(?:\]\])?}}/;
+const DONE_REGEX = /^{{(?:\[\[)?DONE(?:\]\])?}}/;
+const BUTTON_REGEX = /^{{(?:\[\[)?([^}]*)(?:\]\])?}}/;
+const BOLD_REGEX = /^\*\*([^*]* )\*\*/;
+const ITALICS_REGEX = /^__([^_]*)__/;
+const HIGHLIGHT_REGEX = /^\^\^([^^]*)\^\^/;
+const INLINE_STOP_REGEX = /({{|\*\*|__|\^\^)/;
+const TAG_REGEXES = [TODO_REGEX, DONE_REGEX, HIGHLIGHT_REGEX, BUTTON_REGEX];
+// https://github.com/markedjs/marked/blob/d2347e9b9ae517d02138fa6a9844bd8d586acfeb/src/Tokenizer.js#L33-L59
+function indentCodeCompensation(raw, text) {
+    const matchIndentToCode = raw.match(/^(\s+)(?:```)/);
+    if (matchIndentToCode === null) {
+        return text;
+    }
+    const indentToCode = matchIndentToCode[1];
+    return text
+        .split("\n")
+        .map((node) => {
+        const matchIndentInNode = node.match(/^\s+/);
+        if (matchIndentInNode === null) {
+            return node;
+        }
+        const [indentInNode] = matchIndentInNode;
+        if (indentInNode.length >= indentToCode.length) {
+            return node.slice(indentToCode.length);
+        }
+        return node;
+    })
+        .join("\n");
+}
 marked_1.default.use({
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore should be optional
-    renderer: {
-        text: (text) => {
-            let openingTag = false;
-            return text.replace(highlightRegex, () => {
-                openingTag = !openingTag;
-                return openingTag ? '<span class="rm-highlight">' : "</span>";
-            });
+    tokenizer: {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore should accept boolean return value
+        tag(src) {
+            for (const r of TAG_REGEXES) {
+                const match = r.exec(src);
+                if (match) {
+                    return {
+                        type: "html",
+                        raw: match[0],
+                        text: match[0],
+                    };
+                }
+            }
+            return false;
         },
+        emStrong(src) {
+            const match = BOLD_REGEX.exec(src);
+            if (match) {
+                return {
+                    type: "strong",
+                    raw: match[0],
+                    text: match[1],
+                };
+            }
+            const emMatch = ITALICS_REGEX.exec(src);
+            if (emMatch) {
+                return {
+                    type: "em",
+                    raw: emMatch[0],
+                    text: emMatch[1],
+                };
+            }
+            return false;
+        },
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore should accept boolean return value
+        fences(src) {
+            const newSrc = src.replace(/```$/, "\n```");
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore should accept boolean return value
+            const cap = this.rules.block.fences.exec(newSrc);
+            if (cap) {
+                const raw = cap[0];
+                const text = indentCodeCompensation(raw, cap[3] || "");
+                return {
+                    type: "code",
+                    raw,
+                    lang: cap[2] ? cap[2].trim() : cap[2],
+                    text,
+                };
+            }
+            return false;
+        },
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore should accept boolean return value
+        inlineText(src) {
+            const match = INLINE_STOP_REGEX.exec(src);
+            if (match) {
+                return {
+                    type: "text",
+                    raw: src.substring(0, match.index),
+                    text: src.substring(0, match.index),
+                };
+            }
+            return false;
+        },
+    },
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore should be optional
+    renderer: {
         strong: (text) => `<span class="rm-bold">${text}</span>`,
         em: (text) => `<em class="rm-italics">${text}</em>`,
+        html: (text) => {
+            if (TODO_REGEX.test(text)) {
+                return RENDERED_TODO;
+            }
+            else if (DONE_REGEX.test(text)) {
+                return RENDERED_DONE;
+            }
+            else if (HIGHLIGHT_REGEX.test(text)) {
+                const match = HIGHLIGHT_REGEX.exec(text);
+                return `<span class="rm-highlight">${match === null || match === void 0 ? void 0 : match[1]}</span>`;
+            }
+            else if (BUTTON_REGEX.test(text)) {
+                const match = BUTTON_REGEX.exec(text);
+                return `<button>${match === null || match === void 0 ? void 0 : match[1]}</button>`;
+            }
+            else {
+                return text;
+            }
+        },
     },
 });
-const wrap = ({ text, fcn }) => {
-    let openingBold = false;
-    let openingItalics = false;
-    return fcn(text.replace(new RegExp("__", "g"), "_"))
-        .replace(boldRegex, () => {
-        openingBold = !openingBold;
-        return openingBold ? '<span class="rm-bold">' : "</span>";
-    })
-        .replace(italicsRegex, (_, preChar) => {
-        openingItalics = !openingItalics;
-        return openingItalics
-            ? `${preChar}<em class="rm-italics">`
-            : `${preChar}</em>`;
-    });
-};
-const run = (text) => wrap({
-    text,
-    fcn: marked_1.default,
-});
-const parseInline = (text) => wrap({
-    text,
-    fcn: marked_1.default.parseInline,
-});
-exports.parseInline = parseInline;
-exports.default = run;
+exports.lexer = marked_1.default.lexer;
+exports.parseInline = marked_1.default.parseInline;
+exports.default = (text) => marked_1.default(text);
 
 
 /***/ })
@@ -34552,7 +34632,7 @@ exports.default = run;
 /******/ 	var __webpack_module_cache__ = {};
 /******/ 	
 /******/ 	// The require function
-/******/ 	function __nested_webpack_require_70437__(moduleId) {
+/******/ 	function __nested_webpack_require_74363__(moduleId) {
 /******/ 		// Check if module is in cache
 /******/ 		if(__webpack_module_cache__[moduleId]) {
 /******/ 			return __webpack_module_cache__[moduleId].exports;
@@ -34567,7 +34647,7 @@ exports.default = run;
 /******/ 		// Execute the module function
 /******/ 		var threw = true;
 /******/ 		try {
-/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_70437__);
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_74363__);
 /******/ 			threw = false;
 /******/ 		} finally {
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
@@ -34580,21 +34660,21 @@ exports.default = run;
 /************************************************************************/
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
-/******/ 	__nested_webpack_require_70437__.ab = __dirname + "/";/************************************************************************/
+/******/ 	__nested_webpack_require_74363__.ab = __dirname + "/";/************************************************************************/
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nested_webpack_require_70437__(144);
+/******/ 	return __nested_webpack_require_74363__(144);
 /******/ })()
 ;
 
 /***/ }),
 
 /***/ 1867:
-/***/ ((module, exports, __nested_webpack_require_1058043__) => {
+/***/ ((module, exports, __nested_webpack_require_1061969__) => {
 
 /* eslint-disable node/no-deprecated-api */
-var buffer = __nested_webpack_require_1058043__(4293)
+var buffer = __nested_webpack_require_1061969__(4293)
 var Buffer = buffer.Buffer
 
 // alternative to using Object.keys for old browsers
@@ -34660,7 +34740,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
 /***/ }),
 
 /***/ 4841:
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_1059674__) => {
+/***/ ((__unused_webpack_module, exports, __nested_webpack_require_1063600__) => {
 
 "use strict";
 // Copyright Joyent, Inc. and other Node contributors.
@@ -34688,7 +34768,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
 
 /*<replacement>*/
 
-var Buffer = __nested_webpack_require_1059674__(1867).Buffer;
+var Buffer = __nested_webpack_require_1063600__(1867).Buffer;
 /*</replacement>*/
 
 var isEncoding = Buffer.isEncoding || function (encoding) {
@@ -34963,13 +35043,13 @@ function simpleEnd(buf) {
 /***/ }),
 
 /***/ 9318:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1069225__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1073151__) => {
 
 "use strict";
 
-const os = __nested_webpack_require_1069225__(2087);
-const tty = __nested_webpack_require_1069225__(3867);
-const hasFlag = __nested_webpack_require_1069225__(1621);
+const os = __nested_webpack_require_1073151__(2087);
+const tty = __nested_webpack_require_1073151__(3867);
+const hasFlag = __nested_webpack_require_1073151__(1621);
 
 const {env} = process;
 
@@ -35106,15 +35186,15 @@ module.exports = {
 /***/ }),
 
 /***/ 366:
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_1072096__) => {
+/***/ ((__unused_webpack_module, exports, __nested_webpack_require_1076022__) => {
 
-var chownr = __nested_webpack_require_1072096__(9051)
-var tar = __nested_webpack_require_1072096__(2283)
-var pump = __nested_webpack_require_1072096__(8341)
-var mkdirp = __nested_webpack_require_1072096__(7614)
-var fs = __nested_webpack_require_1072096__(5747)
-var path = __nested_webpack_require_1072096__(5622)
-var os = __nested_webpack_require_1072096__(2087)
+var chownr = __nested_webpack_require_1076022__(9051)
+var tar = __nested_webpack_require_1076022__(2283)
+var pump = __nested_webpack_require_1076022__(8341)
+var mkdirp = __nested_webpack_require_1076022__(7614)
+var fs = __nested_webpack_require_1076022__(5747)
+var path = __nested_webpack_require_1076022__(5622)
+var os = __nested_webpack_require_1076022__(2087)
 
 var win32 = os.platform() === 'win32'
 
@@ -35464,14 +35544,14 @@ function mkdirfix (name, opts, cb) {
 /***/ }),
 
 /***/ 7882:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1081833__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1085759__) => {
 
-var util = __nested_webpack_require_1081833__(1669)
-var bl = __nested_webpack_require_1081833__(336)
-var headers = __nested_webpack_require_1081833__(8860)
+var util = __nested_webpack_require_1085759__(1669)
+var bl = __nested_webpack_require_1085759__(336)
+var headers = __nested_webpack_require_1085759__(8860)
 
-var Writable = __nested_webpack_require_1081833__(9822).Writable
-var PassThrough = __nested_webpack_require_1081833__(9822).PassThrough
+var Writable = __nested_webpack_require_1085759__(9822).Writable
+var PassThrough = __nested_webpack_require_1085759__(9822).PassThrough
 
 var noop = function () {}
 
@@ -36030,10 +36110,10 @@ exports.decode = function (buf, filenameEncoding, allowUnknownFormat) {
 /***/ }),
 
 /***/ 2283:
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_1095953__) => {
+/***/ ((__unused_webpack_module, exports, __nested_webpack_require_1099879__) => {
 
-exports.extract = __nested_webpack_require_1095953__(7882)
-exports.pack = __nested_webpack_require_1095953__(4930)
+exports.extract = __nested_webpack_require_1099879__(7882)
+exports.pack = __nested_webpack_require_1099879__(4930)
 
 
 /***/ }),
@@ -36163,7 +36243,7 @@ module.exports.q = codes;
 /***/ }),
 
 /***/ 11:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1099889__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1103815__) => {
 
 "use strict";
 // Copyright Joyent, Inc. and other Node contributors.
@@ -36207,11 +36287,11 @@ var objectKeys = Object.keys || function (obj) {
 
 module.exports = Duplex;
 
-var Readable = __nested_webpack_require_1099889__(3588);
+var Readable = __nested_webpack_require_1103815__(3588);
 
-var Writable = __nested_webpack_require_1099889__(8946);
+var Writable = __nested_webpack_require_1103815__(8946);
 
-__nested_webpack_require_1099889__(4124)(Duplex, Readable);
+__nested_webpack_require_1103815__(4124)(Duplex, Readable);
 
 {
   // Allow the keys array to be GC'ed.
@@ -36309,7 +36389,7 @@ Object.defineProperty(Duplex.prototype, 'destroyed', {
 /***/ }),
 
 /***/ 3392:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1104381__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1108307__) => {
 
 "use strict";
 // Copyright Joyent, Inc. and other Node contributors.
@@ -36339,9 +36419,9 @@ Object.defineProperty(Duplex.prototype, 'destroyed', {
 
 module.exports = PassThrough;
 
-var Transform = __nested_webpack_require_1104381__(4472);
+var Transform = __nested_webpack_require_1108307__(4472);
 
-__nested_webpack_require_1104381__(4124)(PassThrough, Transform);
+__nested_webpack_require_1108307__(4124)(PassThrough, Transform);
 
 function PassThrough(options) {
   if (!(this instanceof PassThrough)) return new PassThrough(options);
@@ -36355,7 +36435,7 @@ PassThrough.prototype._transform = function (chunk, encoding, cb) {
 /***/ }),
 
 /***/ 3588:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1106107__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1110033__) => {
 
 "use strict";
 // Copyright Joyent, Inc. and other Node contributors.
@@ -36389,7 +36469,7 @@ var Duplex;
 Readable.ReadableState = ReadableState;
 /*<replacement>*/
 
-var EE = __nested_webpack_require_1106107__(8614).EventEmitter;
+var EE = __nested_webpack_require_1110033__(8614).EventEmitter;
 
 var EElistenerCount = function EElistenerCount(emitter, type) {
   return emitter.listeners(type).length;
@@ -36399,11 +36479,11 @@ var EElistenerCount = function EElistenerCount(emitter, type) {
 /*<replacement>*/
 
 
-var Stream = __nested_webpack_require_1106107__(4727);
+var Stream = __nested_webpack_require_1110033__(4727);
 /*</replacement>*/
 
 
-var Buffer = __nested_webpack_require_1106107__(4293).Buffer;
+var Buffer = __nested_webpack_require_1110033__(4293).Buffer;
 
 var OurUint8Array = global.Uint8Array || function () {};
 
@@ -36417,7 +36497,7 @@ function _isUint8Array(obj) {
 /*<replacement>*/
 
 
-var debugUtil = __nested_webpack_require_1106107__(1669);
+var debugUtil = __nested_webpack_require_1110033__(1669);
 
 var debug;
 
@@ -36429,14 +36509,14 @@ if (debugUtil && debugUtil.debuglog) {
 /*</replacement>*/
 
 
-var BufferList = __nested_webpack_require_1106107__(2155);
+var BufferList = __nested_webpack_require_1110033__(2155);
 
-var destroyImpl = __nested_webpack_require_1106107__(9543);
+var destroyImpl = __nested_webpack_require_1110033__(9543);
 
-var _require = __nested_webpack_require_1106107__(396),
+var _require = __nested_webpack_require_1110033__(396),
     getHighWaterMark = _require.getHighWaterMark;
 
-var _require$codes = __nested_webpack_require_1106107__(4100)/* .codes */ .q,
+var _require$codes = __nested_webpack_require_1110033__(4100)/* .codes */ .q,
     ERR_INVALID_ARG_TYPE = _require$codes.ERR_INVALID_ARG_TYPE,
     ERR_STREAM_PUSH_AFTER_EOF = _require$codes.ERR_STREAM_PUSH_AFTER_EOF,
     ERR_METHOD_NOT_IMPLEMENTED = _require$codes.ERR_METHOD_NOT_IMPLEMENTED,
@@ -36447,7 +36527,7 @@ var StringDecoder;
 var createReadableStreamAsyncIterator;
 var from;
 
-__nested_webpack_require_1106107__(4124)(Readable, Stream);
+__nested_webpack_require_1110033__(4124)(Readable, Stream);
 
 var errorOrDestroy = destroyImpl.errorOrDestroy;
 var kProxyEvents = ['error', 'close', 'destroy', 'pause', 'resume'];
@@ -36464,7 +36544,7 @@ function prependListener(emitter, event, fn) {
 }
 
 function ReadableState(options, stream, isDuplex) {
-  Duplex = Duplex || __nested_webpack_require_1106107__(11);
+  Duplex = Duplex || __nested_webpack_require_1110033__(11);
   options = options || {}; // Duplex streams are both readable and writable, but share
   // the same options object.
   // However, some cases require setting options to different
@@ -36520,14 +36600,14 @@ function ReadableState(options, stream, isDuplex) {
   this.encoding = null;
 
   if (options.encoding) {
-    if (!StringDecoder) StringDecoder = __nested_webpack_require_1106107__(4841)/* .StringDecoder */ .s;
+    if (!StringDecoder) StringDecoder = __nested_webpack_require_1110033__(4841)/* .StringDecoder */ .s;
     this.decoder = new StringDecoder(options.encoding);
     this.encoding = options.encoding;
   }
 }
 
 function Readable(options) {
-  Duplex = Duplex || __nested_webpack_require_1106107__(11);
+  Duplex = Duplex || __nested_webpack_require_1110033__(11);
   if (!(this instanceof Readable)) return new Readable(options); // Checking for a Stream.Duplex instance is faster here instead of inside
   // the ReadableState constructor, at least with V8 6.5
 
@@ -36682,7 +36762,7 @@ Readable.prototype.isPaused = function () {
 
 
 Readable.prototype.setEncoding = function (enc) {
-  if (!StringDecoder) StringDecoder = __nested_webpack_require_1106107__(4841)/* .StringDecoder */ .s;
+  if (!StringDecoder) StringDecoder = __nested_webpack_require_1110033__(4841)/* .StringDecoder */ .s;
   var decoder = new StringDecoder(enc);
   this._readableState.decoder = decoder; // If setEncoding(null), decoder.encoding equals utf8
 
@@ -37366,7 +37446,7 @@ Readable.prototype.wrap = function (stream) {
 if (typeof Symbol === 'function') {
   Readable.prototype[Symbol.asyncIterator] = function () {
     if (createReadableStreamAsyncIterator === undefined) {
-      createReadableStreamAsyncIterator = __nested_webpack_require_1106107__(5720);
+      createReadableStreamAsyncIterator = __nested_webpack_require_1110033__(5720);
     }
 
     return createReadableStreamAsyncIterator(this);
@@ -37468,7 +37548,7 @@ function endReadableNT(state, stream) {
 if (typeof Symbol === 'function') {
   Readable.from = function (iterable, opts) {
     if (from === undefined) {
-      from = __nested_webpack_require_1106107__(1935);
+      from = __nested_webpack_require_1110033__(1935);
     }
 
     return from(Readable, iterable, opts);
@@ -37486,7 +37566,7 @@ function indexOf(xs, x) {
 /***/ }),
 
 /***/ 4472:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1142150__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1146076__) => {
 
 "use strict";
 // Copyright Joyent, Inc. and other Node contributors.
@@ -37554,15 +37634,15 @@ function indexOf(xs, x) {
 
 module.exports = Transform;
 
-var _require$codes = __nested_webpack_require_1142150__(4100)/* .codes */ .q,
+var _require$codes = __nested_webpack_require_1146076__(4100)/* .codes */ .q,
     ERR_METHOD_NOT_IMPLEMENTED = _require$codes.ERR_METHOD_NOT_IMPLEMENTED,
     ERR_MULTIPLE_CALLBACK = _require$codes.ERR_MULTIPLE_CALLBACK,
     ERR_TRANSFORM_ALREADY_TRANSFORMING = _require$codes.ERR_TRANSFORM_ALREADY_TRANSFORMING,
     ERR_TRANSFORM_WITH_LENGTH_0 = _require$codes.ERR_TRANSFORM_WITH_LENGTH_0;
 
-var Duplex = __nested_webpack_require_1142150__(11);
+var Duplex = __nested_webpack_require_1146076__(11);
 
-__nested_webpack_require_1142150__(4124)(Transform, Duplex);
+__nested_webpack_require_1146076__(4124)(Transform, Duplex);
 
 function afterTransform(er, data) {
   var ts = this._transformState;
@@ -37694,7 +37774,7 @@ function done(stream, er, data) {
 /***/ }),
 
 /***/ 8946:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1150208__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1154134__) => {
 
 "use strict";
 // Copyright Joyent, Inc. and other Node contributors.
@@ -37756,17 +37836,17 @@ Writable.WritableState = WritableState;
 /*<replacement>*/
 
 var internalUtil = {
-  deprecate: __nested_webpack_require_1150208__(5278)
+  deprecate: __nested_webpack_require_1154134__(5278)
 };
 /*</replacement>*/
 
 /*<replacement>*/
 
-var Stream = __nested_webpack_require_1150208__(4727);
+var Stream = __nested_webpack_require_1154134__(4727);
 /*</replacement>*/
 
 
-var Buffer = __nested_webpack_require_1150208__(4293).Buffer;
+var Buffer = __nested_webpack_require_1154134__(4293).Buffer;
 
 var OurUint8Array = global.Uint8Array || function () {};
 
@@ -37778,12 +37858,12 @@ function _isUint8Array(obj) {
   return Buffer.isBuffer(obj) || obj instanceof OurUint8Array;
 }
 
-var destroyImpl = __nested_webpack_require_1150208__(9543);
+var destroyImpl = __nested_webpack_require_1154134__(9543);
 
-var _require = __nested_webpack_require_1150208__(396),
+var _require = __nested_webpack_require_1154134__(396),
     getHighWaterMark = _require.getHighWaterMark;
 
-var _require$codes = __nested_webpack_require_1150208__(4100)/* .codes */ .q,
+var _require$codes = __nested_webpack_require_1154134__(4100)/* .codes */ .q,
     ERR_INVALID_ARG_TYPE = _require$codes.ERR_INVALID_ARG_TYPE,
     ERR_METHOD_NOT_IMPLEMENTED = _require$codes.ERR_METHOD_NOT_IMPLEMENTED,
     ERR_MULTIPLE_CALLBACK = _require$codes.ERR_MULTIPLE_CALLBACK,
@@ -37795,12 +37875,12 @@ var _require$codes = __nested_webpack_require_1150208__(4100)/* .codes */ .q,
 
 var errorOrDestroy = destroyImpl.errorOrDestroy;
 
-__nested_webpack_require_1150208__(4124)(Writable, Stream);
+__nested_webpack_require_1154134__(4124)(Writable, Stream);
 
 function nop() {}
 
 function WritableState(options, stream, isDuplex) {
-  Duplex = Duplex || __nested_webpack_require_1150208__(11);
+  Duplex = Duplex || __nested_webpack_require_1154134__(11);
   options = options || {}; // Duplex streams are both readable and writable, but share
   // the same options object.
   // However, some cases require setting options to different
@@ -37926,7 +38006,7 @@ if (typeof Symbol === 'function' && Symbol.hasInstance && typeof Function.protot
 }
 
 function Writable(options) {
-  Duplex = Duplex || __nested_webpack_require_1150208__(11); // Writable ctor is applied to Duplexes, too.
+  Duplex = Duplex || __nested_webpack_require_1154134__(11); // Writable ctor is applied to Duplexes, too.
   // `realHasInstance` is necessary because using plain `instanceof`
   // would return false, as no `_writableState` property is attached.
   // Trying to use the custom `instanceof` for Writable here will also break the
@@ -38398,7 +38478,7 @@ Writable.prototype._destroy = function (err, cb) {
 /***/ }),
 
 /***/ 5720:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1172110__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1176036__) => {
 
 "use strict";
 
@@ -38407,7 +38487,7 @@ var _Object$setPrototypeO;
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-var finished = __nested_webpack_require_1172110__(7850);
+var finished = __nested_webpack_require_1176036__(7850);
 
 var kLastResolve = Symbol('lastResolve');
 var kLastReject = Symbol('lastReject');
@@ -38612,7 +38692,7 @@ module.exports = createReadableStreamAsyncIterator;
 /***/ }),
 
 /***/ 2155:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1178161__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1182087__) => {
 
 "use strict";
 
@@ -38629,10 +38709,10 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
-var _require = __nested_webpack_require_1178161__(4293),
+var _require = __nested_webpack_require_1182087__(4293),
     Buffer = _require.Buffer;
 
-var _require2 = __nested_webpack_require_1178161__(1669),
+var _require2 = __nested_webpack_require_1182087__(1669),
     inspect = _require2.inspect;
 
 var custom = inspect && inspect.custom || 'inspect';
@@ -38941,14 +39021,14 @@ module.exports = {
 /***/ }),
 
 /***/ 7850:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1187774__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1191700__) => {
 
 "use strict";
 // Ported from https://github.com/mafintosh/end-of-stream with
 // permission from the author, Mathias Buus (@mafintosh).
 
 
-var ERR_STREAM_PREMATURE_CLOSE = __nested_webpack_require_1187774__(4100)/* .codes.ERR_STREAM_PREMATURE_CLOSE */ .q.ERR_STREAM_PREMATURE_CLOSE;
+var ERR_STREAM_PREMATURE_CLOSE = __nested_webpack_require_1191700__(4100)/* .codes.ERR_STREAM_PREMATURE_CLOSE */ .q.ERR_STREAM_PREMATURE_CLOSE;
 
 function once(callback) {
   var called = false;
@@ -39052,7 +39132,7 @@ module.exports = eos;
 /***/ }),
 
 /***/ 1935:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1191006__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1194932__) => {
 
 "use strict";
 
@@ -39067,7 +39147,7 @@ function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { va
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-var ERR_INVALID_ARG_TYPE = __nested_webpack_require_1191006__(4100)/* .codes.ERR_INVALID_ARG_TYPE */ .q.ERR_INVALID_ARG_TYPE;
+var ERR_INVALID_ARG_TYPE = __nested_webpack_require_1194932__(4100)/* .codes.ERR_INVALID_ARG_TYPE */ .q.ERR_INVALID_ARG_TYPE;
 
 function from(Readable, iterable, opts) {
   var iterator;
@@ -39123,7 +39203,7 @@ module.exports = from;
 /***/ }),
 
 /***/ 2916:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1194267__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1198193__) => {
 
 "use strict";
 // Ported from https://github.com/mafintosh/pump with
@@ -39141,7 +39221,7 @@ function once(callback) {
   };
 }
 
-var _require$codes = __nested_webpack_require_1194267__(4100)/* .codes */ .q,
+var _require$codes = __nested_webpack_require_1198193__(4100)/* .codes */ .q,
     ERR_MISSING_ARGS = _require$codes.ERR_MISSING_ARGS,
     ERR_STREAM_DESTROYED = _require$codes.ERR_STREAM_DESTROYED;
 
@@ -39160,7 +39240,7 @@ function destroyer(stream, reading, writing, callback) {
   stream.on('close', function () {
     closed = true;
   });
-  if (eos === undefined) eos = __nested_webpack_require_1194267__(7850);
+  if (eos === undefined) eos = __nested_webpack_require_1198193__(7850);
   eos(stream, {
     readable: reading,
     writable: writing
@@ -39227,12 +39307,12 @@ module.exports = pipeline;
 /***/ }),
 
 /***/ 396:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1196796__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1200722__) => {
 
 "use strict";
 
 
-var ERR_INVALID_OPT_VALUE = __nested_webpack_require_1196796__(4100)/* .codes.ERR_INVALID_OPT_VALUE */ .q.ERR_INVALID_OPT_VALUE;
+var ERR_INVALID_OPT_VALUE = __nested_webpack_require_1200722__(4100)/* .codes.ERR_INVALID_OPT_VALUE */ .q.ERR_INVALID_OPT_VALUE;
 
 function highWaterMarkFrom(options, isDuplex, duplexKey) {
   return options.highWaterMark != null ? options.highWaterMark : isDuplex ? options[duplexKey] : null;
@@ -39261,49 +39341,49 @@ module.exports = {
 /***/ }),
 
 /***/ 4727:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1197670__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1201596__) => {
 
-module.exports = __nested_webpack_require_1197670__(2413);
+module.exports = __nested_webpack_require_1201596__(2413);
 
 
 /***/ }),
 
 /***/ 9822:
-/***/ ((module, exports, __nested_webpack_require_1197791__) => {
+/***/ ((module, exports, __nested_webpack_require_1201717__) => {
 
-var Stream = __nested_webpack_require_1197791__(2413);
+var Stream = __nested_webpack_require_1201717__(2413);
 if (process.env.READABLE_STREAM === 'disable' && Stream) {
   module.exports = Stream.Readable;
   Object.assign(module.exports, Stream);
   module.exports.Stream = Stream;
 } else {
-  exports = module.exports = __nested_webpack_require_1197791__(3588);
+  exports = module.exports = __nested_webpack_require_1201717__(3588);
   exports.Stream = Stream || exports;
   exports.Readable = exports;
-  exports.Writable = __nested_webpack_require_1197791__(8946);
-  exports.Duplex = __nested_webpack_require_1197791__(11);
-  exports.Transform = __nested_webpack_require_1197791__(4472);
-  exports.PassThrough = __nested_webpack_require_1197791__(3392);
-  exports.finished = __nested_webpack_require_1197791__(7850);
-  exports.pipeline = __nested_webpack_require_1197791__(2916);
+  exports.Writable = __nested_webpack_require_1201717__(8946);
+  exports.Duplex = __nested_webpack_require_1201717__(11);
+  exports.Transform = __nested_webpack_require_1201717__(4472);
+  exports.PassThrough = __nested_webpack_require_1201717__(3392);
+  exports.finished = __nested_webpack_require_1201717__(7850);
+  exports.pipeline = __nested_webpack_require_1201717__(2916);
 }
 
 
 /***/ }),
 
 /***/ 4930:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1198518__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1202444__) => {
 
-var constants = __nested_webpack_require_1198518__(3186)
-var eos = __nested_webpack_require_1198518__(1205)
-var inherits = __nested_webpack_require_1198518__(4124)
+var constants = __nested_webpack_require_1202444__(3186)
+var eos = __nested_webpack_require_1202444__(1205)
+var inherits = __nested_webpack_require_1202444__(4124)
 var alloc = Buffer.alloc
 
-var Readable = __nested_webpack_require_1198518__(9822).Readable
-var Writable = __nested_webpack_require_1198518__(9822).Writable
-var StringDecoder = __nested_webpack_require_1198518__(4304).StringDecoder
+var Readable = __nested_webpack_require_1202444__(9822).Readable
+var Writable = __nested_webpack_require_1202444__(9822).Writable
+var StringDecoder = __nested_webpack_require_1202444__(4304).StringDecoder
 
-var headers = __nested_webpack_require_1198518__(8860)
+var headers = __nested_webpack_require_1202444__(8860)
 
 var DMODE = parseInt('755', 8)
 var FMODE = parseInt('644', 8)
@@ -39554,9 +39634,9 @@ module.exports = Pack
 /***/ }),
 
 /***/ 421:
-/***/ ((module, exports, __nested_webpack_require_1204232__) => {
+/***/ ((module, exports, __nested_webpack_require_1208158__) => {
 
-var Stream = __nested_webpack_require_1204232__(2413)
+var Stream = __nested_webpack_require_1208158__(2413)
 
 // through
 //
@@ -39669,11 +39749,11 @@ function through (write, end, opts) {
 /***/ }),
 
 /***/ 3467:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1206953__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1210879__) => {
 
-var through = __nested_webpack_require_1206953__(421);
-var bz2 = __nested_webpack_require_1206953__(2589);
-var bitIterator = __nested_webpack_require_1206953__(7877);
+var through = __nested_webpack_require_1210879__(421);
+var bz2 = __nested_webpack_require_1210879__(2589);
+var bitIterator = __nested_webpack_require_1210879__(7877);
 
 module.exports = unbzip2Stream;
 
@@ -40187,14 +40267,14 @@ module.exports = bzip2;
 /***/ }),
 
 /***/ 5278:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1224419__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1228345__) => {
 
 
 /**
  * For Node.js, simply re-export the core `util.deprecate` function.
  */
 
-module.exports = __nested_webpack_require_1224419__(1669).deprecate;
+module.exports = __nested_webpack_require_1228345__(1669).deprecate;
 
 
 /***/ }),
@@ -40240,17 +40320,17 @@ function wrappy (fn, cb) {
 /***/ }),
 
 /***/ 8867:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1225598__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1229524__) => {
 
 "use strict";
 
 
-const WebSocket = __nested_webpack_require_1225598__(1518);
+const WebSocket = __nested_webpack_require_1229524__(1518);
 
-WebSocket.createWebSocketStream = __nested_webpack_require_1225598__(1658);
-WebSocket.Server = __nested_webpack_require_1225598__(8887);
-WebSocket.Receiver = __nested_webpack_require_1225598__(5066);
-WebSocket.Sender = __nested_webpack_require_1225598__(6947);
+WebSocket.createWebSocketStream = __nested_webpack_require_1229524__(1658);
+WebSocket.Server = __nested_webpack_require_1229524__(8887);
+WebSocket.Receiver = __nested_webpack_require_1229524__(5066);
+WebSocket.Sender = __nested_webpack_require_1229524__(6947);
 
 module.exports = WebSocket;
 
@@ -40258,12 +40338,12 @@ module.exports = WebSocket;
 /***/ }),
 
 /***/ 9436:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1225984__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1229910__) => {
 
 "use strict";
 
 
-const { EMPTY_BUFFER } = __nested_webpack_require_1225984__(5949);
+const { EMPTY_BUFFER } = __nested_webpack_require_1229910__(5949);
 
 /**
  * Merges an array of buffers into a new buffer.
@@ -40365,7 +40445,7 @@ function toBuffer(data) {
 }
 
 try {
-  const bufferUtil = __nested_webpack_require_1225984__(1269);
+  const bufferUtil = __nested_webpack_require_1229910__(1269);
   const bu = bufferUtil.BufferUtil || bufferUtil;
 
   module.exports = {
@@ -40899,16 +40979,16 @@ module.exports = Limiter;
 /***/ }),
 
 /***/ 6684:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1241903__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1245829__) => {
 
 "use strict";
 
 
-const zlib = __nested_webpack_require_1241903__(8761);
+const zlib = __nested_webpack_require_1245829__(8761);
 
-const bufferUtil = __nested_webpack_require_1241903__(9436);
-const Limiter = __nested_webpack_require_1241903__(1356);
-const { kStatusCode, NOOP } = __nested_webpack_require_1241903__(5949);
+const bufferUtil = __nested_webpack_require_1245829__(9436);
+const Limiter = __nested_webpack_require_1245829__(1356);
+const { kStatusCode, NOOP } = __nested_webpack_require_1245829__(5949);
 
 const TRAILER = Buffer.from([0x00, 0x00, 0xff, 0xff]);
 const kPerMessageDeflate = Symbol('permessage-deflate');
@@ -41421,22 +41501,22 @@ function inflateOnError(err) {
 /***/ }),
 
 /***/ 5066:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1256221__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1260147__) => {
 
 "use strict";
 
 
-const { Writable } = __nested_webpack_require_1256221__(2413);
+const { Writable } = __nested_webpack_require_1260147__(2413);
 
-const PerMessageDeflate = __nested_webpack_require_1256221__(6684);
+const PerMessageDeflate = __nested_webpack_require_1260147__(6684);
 const {
   BINARY_TYPES,
   EMPTY_BUFFER,
   kStatusCode,
   kWebSocket
-} = __nested_webpack_require_1256221__(5949);
-const { concat, toArrayBuffer, unmask } = __nested_webpack_require_1256221__(9436);
-const { isValidStatusCode, isValidUTF8 } = __nested_webpack_require_1256221__(6279);
+} = __nested_webpack_require_1260147__(5949);
+const { concat, toArrayBuffer, unmask } = __nested_webpack_require_1260147__(9436);
+const { isValidStatusCode, isValidUTF8 } = __nested_webpack_require_1260147__(6279);
 
 const GET_INFO = 0;
 const GET_PAYLOAD_LENGTH_16 = 1;
@@ -41936,17 +42016,17 @@ function error(ErrorCtor, message, prefix, statusCode) {
 /***/ }),
 
 /***/ 6947:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1268755__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1272681__) => {
 
 "use strict";
 
 
-const { randomFillSync } = __nested_webpack_require_1268755__(6417);
+const { randomFillSync } = __nested_webpack_require_1272681__(6417);
 
-const PerMessageDeflate = __nested_webpack_require_1268755__(6684);
-const { EMPTY_BUFFER } = __nested_webpack_require_1268755__(5949);
-const { isValidStatusCode } = __nested_webpack_require_1268755__(6279);
-const { mask: applyMask, toBuffer } = __nested_webpack_require_1268755__(9436);
+const PerMessageDeflate = __nested_webpack_require_1272681__(6684);
+const { EMPTY_BUFFER } = __nested_webpack_require_1272681__(5949);
+const { isValidStatusCode } = __nested_webpack_require_1272681__(6279);
+const { mask: applyMask, toBuffer } = __nested_webpack_require_1272681__(9436);
 
 const mask = Buffer.alloc(4);
 
@@ -42349,12 +42429,12 @@ module.exports = Sender;
 /***/ }),
 
 /***/ 1658:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1279537__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1283463__) => {
 
 "use strict";
 
 
-const { Duplex } = __nested_webpack_require_1279537__(2413);
+const { Duplex } = __nested_webpack_require_1283463__(2413);
 
 /**
  * Emits the `'close'` event on a stream.
@@ -42522,13 +42602,13 @@ module.exports = createWebSocketStream;
 /***/ }),
 
 /***/ 6279:
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_1283578__) => {
+/***/ ((__unused_webpack_module, exports, __nested_webpack_require_1287504__) => {
 
 "use strict";
 
 
 try {
-  const isValidUTF8 = __nested_webpack_require_1283578__(4592);
+  const isValidUTF8 = __nested_webpack_require_1287504__(4592);
 
   exports.isValidUTF8 =
     typeof isValidUTF8 === 'object'
@@ -42560,19 +42640,19 @@ exports.isValidStatusCode = (code) => {
 /***/ }),
 
 /***/ 8887:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1284368__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1288294__) => {
 
 "use strict";
 
 
-const EventEmitter = __nested_webpack_require_1284368__(8614);
-const { createHash } = __nested_webpack_require_1284368__(6417);
-const { createServer, STATUS_CODES } = __nested_webpack_require_1284368__(8605);
+const EventEmitter = __nested_webpack_require_1288294__(8614);
+const { createHash } = __nested_webpack_require_1288294__(6417);
+const { createServer, STATUS_CODES } = __nested_webpack_require_1288294__(8605);
 
-const PerMessageDeflate = __nested_webpack_require_1284368__(6684);
-const WebSocket = __nested_webpack_require_1284368__(1518);
-const { format, parse } = __nested_webpack_require_1284368__(2035);
-const { GUID, kWebSocket } = __nested_webpack_require_1284368__(5949);
+const PerMessageDeflate = __nested_webpack_require_1288294__(6684);
+const WebSocket = __nested_webpack_require_1288294__(1518);
+const { format, parse } = __nested_webpack_require_1288294__(2035);
+const { GUID, kWebSocket } = __nested_webpack_require_1288294__(5949);
 
 const keyRegex = /^[+/0-9A-Za-z]{22}==$/;
 
@@ -42974,22 +43054,22 @@ function abortHandshake(socket, code, message, headers) {
 /***/ }),
 
 /***/ 1518:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1295982__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1299908__) => {
 
 "use strict";
 
 
-const EventEmitter = __nested_webpack_require_1295982__(8614);
-const https = __nested_webpack_require_1295982__(7211);
-const http = __nested_webpack_require_1295982__(8605);
-const net = __nested_webpack_require_1295982__(1631);
-const tls = __nested_webpack_require_1295982__(4016);
-const { randomBytes, createHash } = __nested_webpack_require_1295982__(6417);
-const { URL } = __nested_webpack_require_1295982__(8835);
+const EventEmitter = __nested_webpack_require_1299908__(8614);
+const https = __nested_webpack_require_1299908__(7211);
+const http = __nested_webpack_require_1299908__(8605);
+const net = __nested_webpack_require_1299908__(1631);
+const tls = __nested_webpack_require_1299908__(4016);
+const { randomBytes, createHash } = __nested_webpack_require_1299908__(6417);
+const { URL } = __nested_webpack_require_1299908__(8835);
 
-const PerMessageDeflate = __nested_webpack_require_1295982__(6684);
-const Receiver = __nested_webpack_require_1295982__(5066);
-const Sender = __nested_webpack_require_1295982__(6947);
+const PerMessageDeflate = __nested_webpack_require_1299908__(6684);
+const Receiver = __nested_webpack_require_1299908__(5066);
+const Sender = __nested_webpack_require_1299908__(6947);
 const {
   BINARY_TYPES,
   EMPTY_BUFFER,
@@ -42997,10 +43077,10 @@ const {
   kStatusCode,
   kWebSocket,
   NOOP
-} = __nested_webpack_require_1295982__(5949);
-const { addEventListener, removeEventListener } = __nested_webpack_require_1295982__(4561);
-const { format, parse } = __nested_webpack_require_1295982__(2035);
-const { toBuffer } = __nested_webpack_require_1295982__(9436);
+} = __nested_webpack_require_1299908__(5949);
+const { addEventListener, removeEventListener } = __nested_webpack_require_1299908__(4561);
+const { format, parse } = __nested_webpack_require_1299908__(2035);
+const { toBuffer } = __nested_webpack_require_1299908__(9436);
 
 const readyStates = ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'];
 const protocolVersions = [8, 13];
@@ -43915,17 +43995,17 @@ function socketOnError() {
 /***/ }),
 
 /***/ 8781:
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_1320982__) => {
+/***/ ((__unused_webpack_module, exports, __nested_webpack_require_1324908__) => {
 
-var fs = __nested_webpack_require_1320982__(5747);
-var zlib = __nested_webpack_require_1320982__(8761);
-var fd_slicer = __nested_webpack_require_1320982__(5010);
-var crc32 = __nested_webpack_require_1320982__(4794);
-var util = __nested_webpack_require_1320982__(1669);
-var EventEmitter = __nested_webpack_require_1320982__(8614).EventEmitter;
-var Transform = __nested_webpack_require_1320982__(2413).Transform;
-var PassThrough = __nested_webpack_require_1320982__(2413).PassThrough;
-var Writable = __nested_webpack_require_1320982__(2413).Writable;
+var fs = __nested_webpack_require_1324908__(5747);
+var zlib = __nested_webpack_require_1324908__(8761);
+var fd_slicer = __nested_webpack_require_1324908__(5010);
+var crc32 = __nested_webpack_require_1324908__(4794);
+var util = __nested_webpack_require_1324908__(1669);
+var EventEmitter = __nested_webpack_require_1324908__(8614).EventEmitter;
+var Transform = __nested_webpack_require_1324908__(2413).Transform;
+var PassThrough = __nested_webpack_require_1324908__(2413).PassThrough;
+var Writable = __nested_webpack_require_1324908__(2413).Writable;
 
 exports.open = open;
 exports.fromFd = fromFd;
@@ -44718,7 +44798,7 @@ function defaultCallback(err) {
 /***/ }),
 
 /***/ 6144:
-/***/ (function(__unused_webpack_module, exports, __nested_webpack_require_1353972__) {
+/***/ (function(__unused_webpack_module, exports, __nested_webpack_require_1357898__) {
 
 "use strict";
 
@@ -44736,10 +44816,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = exports.renderHtmlFromPage = exports.defaultConfig = void 0;
-const path_1 = __importDefault(__nested_webpack_require_1353972__(5622));
-const fs_1 = __importDefault(__nested_webpack_require_1353972__(5747));
-const chrome_aws_lambda_1 = __importDefault(__nested_webpack_require_1353972__(8830));
-const roam_marked_1 = __importDefault(__nested_webpack_require_1353972__(8480));
+const path_1 = __importDefault(__nested_webpack_require_1357898__(5622));
+const fs_1 = __importDefault(__nested_webpack_require_1357898__(5747));
+const chrome_aws_lambda_1 = __importDefault(__nested_webpack_require_1357898__(8830));
+const roam_marked_1 = __importDefault(__nested_webpack_require_1357898__(8480));
 const CONFIG_PAGE_NAMES = ["roam/js/static-site", "roam/js/public-garden"];
 const IGNORE_BLOCKS = CONFIG_PAGE_NAMES.map((c) => `${c}/ignore`);
 const TITLE_REGEX = new RegExp(`(?:${CONFIG_PAGE_NAMES.map((c) => `${c.replace("/", "\\/")}/title`).join("|")})::(.*)`);
@@ -44749,6 +44829,10 @@ const allBlockMapper = (t) => [
     t,
     ...t.children.flatMap(allBlockMapper),
 ];
+const toTextMapper = (t) => ({
+    text: t.text,
+    children: t.children.map(toTextMapper),
+});
 const extractTag = (tag) => tag.startsWith("#[[") && tag.endsWith("]]")
     ? tag.substring(3, tag.length - 2)
     : tag.startsWith("[[") && tag.endsWith("]]")
@@ -44758,8 +44842,7 @@ const extractTag = (tag) => tag.startsWith("#[[") && tag.endsWith("]]")
             : tag;
 exports.defaultConfig = {
     index: "Website Index",
-    titleFilter: (title) => !CONFIG_PAGE_NAMES.includes(title),
-    contentFilter: () => true,
+    filter: [],
     template: `<!doctype html>
 <html>
 <head>
@@ -44793,28 +44876,22 @@ const DEFAULT_STYLE = `<style>
 }
 </style>
 `;
-const getTitleRuleFromNode = (n) => {
-    const { text, children } = n;
+const getTitleRuleFromNode = ({ rule: text, values: children }) => {
     if (text.trim().toUpperCase() === "STARTS WITH" && children.length) {
-        return (title) => title.startsWith(extractTag(children[0].text));
+        return (title) => title.startsWith(extractTag(children[0]));
     }
-    else {
-        return exports.defaultConfig.titleFilter;
-    }
+    return undefined;
 };
-const getContentRuleFromNode = (n) => {
-    const { text = "", children = [] } = n;
+const getContentRuleFromNode = ({ rule: text, values: children }) => {
     if (text.trim().toUpperCase() === "TAGGED WITH" && children.length) {
-        const tag = extractTag(children[0].text);
+        const tag = extractTag(children[0]);
         const findTag = (content) => content.text.includes(`#${tag}`) ||
             content.text.includes(`[[${tag}]]`) ||
             content.text.includes(`${tag}::`) ||
             content.children.some(findTag);
         return (content) => content.some(findTag);
     }
-    else {
-        return () => true;
-    }
+    return undefined;
 };
 const getParsedTree = ({ page, pageName, }) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -44825,9 +44902,8 @@ const getParsedTree = ({ page, pageName, }) => __awaiter(void 0, void 0, void 0,
         throw new Error(e);
     }
 });
-const getConfigFromPage = ({ page, configPage, }) => __awaiter(void 0, void 0, void 0, function* () {
+const getConfigFromPage = (parsedTree) => {
     var _a, _b;
-    const parsedTree = yield getParsedTree({ page, pageName: configPage });
     const getConfigNode = (key) => parsedTree.find((n) => n.text.trim().toUpperCase() === key.toUpperCase());
     const indexNode = getConfigNode("index");
     const filterNode = getConfigNode("filter");
@@ -44841,9 +44917,10 @@ const getConfigFromPage = ({ page, configPage, }) => __awaiter(void 0, void 0, v
     const withIndex = ((_a = indexNode === null || indexNode === void 0 ? void 0 : indexNode.children) === null || _a === void 0 ? void 0 : _a.length) ? { index: extractTag(indexNode.children[0].text.trim()) }
         : {};
     const withFilter = ((_b = filterNode === null || filterNode === void 0 ? void 0 : filterNode.children) === null || _b === void 0 ? void 0 : _b.length) ? {
-        titleFilter: (t) => t === withIndex.index ||
-            filterNode.children.map(getTitleRuleFromNode).some((r) => r(t)),
-        contentFilter: (c) => filterNode.children.map(getContentRuleFromNode).some((r) => r(c)),
+        filter: filterNode.children.map((t) => ({
+            rule: t.text,
+            values: t.children.map((c) => c.text),
+        })),
     }
         : {};
     const withTemplate = template
@@ -44855,7 +44932,7 @@ const getConfigFromPage = ({ page, configPage, }) => __awaiter(void 0, void 0, v
         ? { referenceTemplate }
         : {};
     return Object.assign(Object.assign(Object.assign(Object.assign({}, withIndex), withFilter), withTemplate), withReferenceTemplate);
-});
+};
 const convertPageToHtml = ({ name, index }) => name === index
     ? "index.html"
     : `${encodeURIComponent(name.replace(/ /g, "_").replace(/[",?#:$;/@&=+']/g, ""))}.html`;
@@ -44887,20 +44964,16 @@ const VIEW_CONTAINER = {
     document: "div",
     numbered: "ol",
 };
-const convertContentToHtml = ({ content, viewType, level, debug = false, }) => {
+const convertContentToHtml = ({ content, viewType, level, }) => {
     if (content.length === 0) {
         return "";
     }
     const items = content.map((t) => {
         const inlineMarked = roam_marked_1.default(t.text);
-        if (debug) {
-            console.log("converted", t.text, "to", inlineMarked);
-        }
         const children = convertContentToHtml({
             content: t.children,
             viewType: t.viewType,
             level: level + 1,
-            debug,
         });
         const innerHtml = `${inlineMarked}\n${children}`;
         if (level === 0 && viewType === "document") {
@@ -44924,9 +44997,6 @@ const renderHtmlFromPage = ({ outputPath, pageContent, p, config, pageNames, }) 
         viewType: pageContent.viewType,
         level: 0,
     });
-    if (p === config.index) {
-        console.log(markedContent);
-    }
     const hydratedHtml = config.template
         .replace("</head>", `${DEFAULT_STYLE}${head}</head>`)
         .replace(/\${PAGE_NAME}/g, title)
@@ -44945,7 +45015,7 @@ const renderHtmlFromPage = ({ outputPath, pageContent, p, config, pageNames, }) 
     fs_1.default.writeFileSync(path_1.default.join(outputPath, htmlFileName), hydratedHtml);
 };
 exports.renderHtmlFromPage = renderHtmlFromPage;
-const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.log, error: console.error }, pathRoot = process.cwd(), }) => __awaiter(void 0, void 0, void 0, function* () {
+const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.log, error: console.error }, pathRoot = process.cwd(), inputConfig = {}, }) => __awaiter(void 0, void 0, void 0, function* () {
     const { info, error } = logger;
     info(`Hello ${roamUsername}! Fetching from ${roamGraph}...`);
     const chromiumPath = yield chrome_aws_lambda_1.default.executablePath;
@@ -44965,15 +45035,8 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
         .then((browser) => __awaiter(void 0, void 0, void 0, function* () {
         const page = yield browser.newPage();
         try {
-            const downloadPath = path_1.default.join(pathRoot, "downloads");
             const outputPath = path_1.default.join(pathRoot, "out");
-            fs_1.default.mkdirSync(downloadPath, { recursive: true });
             fs_1.default.mkdirSync(outputPath, { recursive: true });
-            const cdp = yield page.target().createCDPSession();
-            cdp.send("Page.setDownloadBehavior", {
-                behavior: "allow",
-                downloadPath,
-            });
             yield page.goto("https://roamresearch.com/#/signin?disablejs=true", {
                 waitUntil: "networkidle0",
             });
@@ -45039,52 +45102,77 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
                 };
             });
             const configPage = allPageNames.find((c) => CONFIG_PAGE_NAMES.includes(c)) || "";
-            const config = Object.assign(Object.assign({}, exports.defaultConfig), (yield (configPage
-                ? getConfigFromPage({ configPage, page })
-                : Promise.resolve({}))));
-            const pages = {};
+            const configPageTree = configPage
+                ? yield getParsedTree({ page, pageName: configPage })
+                : [];
+            const userConfig = getConfigFromPage(configPageTree);
+            const input = Object.assign(Object.assign(Object.assign({}, exports.defaultConfig), userConfig), inputConfig);
+            const titleFilters = input.filter.length
+                ? input.filter.map(getTitleRuleFromNode).filter((f) => !!f)
+                : [() => false];
+            const contentFilters = input.filter
+                .map(getContentRuleFromNode)
+                .filter((f) => !!f);
+            const config = Object.assign(Object.assign({}, input), { titleFilter: (t) => !titleFilters.length || titleFilters.some((r) => r && r(t)), contentFilter: (c) => !contentFilters.length || contentFilters.some((r) => r && r(c)) });
             info(`quering data ${new Date().toLocaleTimeString()}`);
-            yield Promise.all(allPageNames.filter(config.titleFilter).map((pageName) => __awaiter(void 0, void 0, void 0, function* () {
-                var _c, _d, _e, _f, _g, _h, _j, _k;
-                const content = yield getParsedTree({ page, pageName });
-                if (pageName === config.index || config.contentFilter(content)) {
-                    const references = yield page
-                        .evaluate((pageName) => {
-                        const findParentBlock = (b) => b.title
-                            ? b
-                            : findParentBlock(window.roamAlphaAPI.q(`[:find (pull ?e [*]) :where [?e :block/children ${b.id}]]`)[0][0]);
-                        const parentBlocks = window.roamAlphaAPI
-                            .q(`[:find (pull ?parentPage [*]) :where [?parentPage :block/children ?referencingBlock] [?referencingBlock :block/refs ?referencedPage] [?referencedPage :node/title "${pageName.replace(/"/g, '\\"')}"]]`)
-                            .filter((block) => block.length);
-                        const blocks = parentBlocks.map((b) => findParentBlock(b[0]));
-                        return Array.from(new Set(blocks.map((b) => b.title || "").filter((t) => !!t)));
-                    }, pageName)
-                        .catch((e) => {
-                        console.error("Failed to find references for page", pageName);
-                        throw new Error(e);
-                    });
-                    const viewType = yield page
-                        .evaluate((pageName) => {
-                        var _a, _b;
-                        return ((_b = (_a = window.roamAlphaAPI.q(`[:find ?v :where [?e :children/view-type ?v] [?e :node/title "${pageName.replace(/"/g, '\\"')}"]]`)) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b[0]) || "bullet";
-                    }, pageName)
-                        .catch((e) => {
-                        console.error("Failed to fetch view type for page", pageName);
-                        throw new Error(e);
-                    });
-                    const allBlocks = content.flatMap(allBlockMapper);
-                    const titleMatch = (_e = (_d = (_c = allBlocks
-                        .find((s) => TITLE_REGEX.test(s.text))) === null || _c === void 0 ? void 0 : _c.text) === null || _d === void 0 ? void 0 : _d.match) === null || _e === void 0 ? void 0 : _e.call(_d, TITLE_REGEX);
-                    const headMatch = (_k = (_j = (_h = (_g = (_f = allBlocks
-                        .find((s) => HEAD_REGEX.test(s.text))) === null || _f === void 0 ? void 0 : _f.children) === null || _g === void 0 ? void 0 : _g[0]) === null || _h === void 0 ? void 0 : _h.text) === null || _j === void 0 ? void 0 : _j.match) === null || _k === void 0 ? void 0 : _k.call(_j, HTML_REGEX);
-                    const title = titleMatch ? titleMatch[1].trim() : pageName;
-                    const head = headMatch ? headMatch[1] : "";
-                    pages[pageName] = { content, references, title, head, viewType };
-                }
+            const pageNamesWithContent = yield Promise.all(allPageNames
+                .filter((pageName) => pageName === config.index || config.titleFilter(pageName))
+                .filter((pageName) => !CONFIG_PAGE_NAMES.includes(pageName))
+                .map((pageName) => getParsedTree({ page, pageName }).then((content) => ({
+                pageName,
+                content,
+            }))));
+            const entries = yield Promise.all(pageNamesWithContent
+                .filter(({ pageName, content }) => pageName === config.index || config.contentFilter(content))
+                .map(({ pageName, content }) => Promise.all([
+                page.evaluate((pageName) => {
+                    const findParentBlock = (b) => b.title
+                        ? b
+                        : findParentBlock(window.roamAlphaAPI.q(`[:find (pull ?e [*]) :where [?e :block/children ${b.id}]]`)[0][0]);
+                    const parentBlocks = window.roamAlphaAPI
+                        .q(`[:find (pull ?parentPage [*]) :where [?parentPage :block/children ?referencingBlock] [?referencingBlock :block/refs ?referencedPage] [?referencedPage :node/title "${pageName.replace(/"/g, '\\"')}"]]`)
+                        .filter((block) => block.length);
+                    const blocks = parentBlocks.map((b) => findParentBlock(b[0]));
+                    return Array.from(new Set(blocks.map((b) => b.title || "").filter((t) => !!t)));
+                }, pageName),
+                page.evaluate((pageName) => {
+                    var _a, _b;
+                    return ((_b = (_a = window.roamAlphaAPI.q(`[:find ?v :where [?e :children/view-type ?v] [?e :node/title "${pageName.replace(/"/g, '\\"')}"]]`)) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b[0]) || "bullet";
+                }, pageName),
+            ])
+                .then(([references, viewType]) => ({
+                references,
+                pageName,
+                content,
+                viewType,
+            }))
+                .catch((e) => {
+                console.error("Failed to find references for page", pageName);
+                throw new Error(e);
             })));
+            const pages = Object.fromEntries(entries.map(({ content, pageName, references, viewType }) => {
+                var _a, _b, _c, _d, _e, _f, _g, _h;
+                const allBlocks = content.flatMap(allBlockMapper);
+                const titleMatch = (_c = (_b = (_a = allBlocks
+                    .find((s) => TITLE_REGEX.test(s.text))) === null || _a === void 0 ? void 0 : _a.text) === null || _b === void 0 ? void 0 : _b.match) === null || _c === void 0 ? void 0 : _c.call(_b, TITLE_REGEX);
+                const headMatch = (_h = (_g = (_f = (_e = (_d = allBlocks
+                    .find((s) => HEAD_REGEX.test(s.text))) === null || _d === void 0 ? void 0 : _d.children) === null || _e === void 0 ? void 0 : _e[0]) === null || _f === void 0 ? void 0 : _f.text) === null || _g === void 0 ? void 0 : _g.match) === null || _h === void 0 ? void 0 : _h.call(_g, HTML_REGEX);
+                const title = titleMatch ? titleMatch[1].trim() : pageName;
+                const head = headMatch ? headMatch[1] : "";
+                return [
+                    pageName,
+                    {
+                        content,
+                        references,
+                        title,
+                        head,
+                        viewType,
+                    },
+                ];
+            }));
             yield page.close();
             yield browser.close();
-            return { pages, outputPath, config };
+            return { pages, outputPath, config, configPageTree };
         }
         catch (e) {
             yield page.screenshot({ path: path_1.default.join(pathRoot, "error.png") });
@@ -45092,8 +45180,8 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
             throw new Error(e);
         }
     }))
-        .then(({ pages, outputPath, config }) => {
-        const pageNames = Object.keys(pages);
+        .then(({ pages, outputPath, config, configPageTree }) => {
+        const pageNames = Object.keys(pages).sort();
         info(`resolving ${pageNames.length} pages`);
         info(`Here are some: ${pageNames.slice(0, 5)}`);
         pageNames.map((p) => {
@@ -45113,7 +45201,7 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
                 pageNames,
             });
         });
-        return;
+        return configPageTree.map(toTextMapper);
     })
         .catch((e) => {
         error(e.message);
@@ -45348,7 +45436,7 @@ module.exports = __webpack_require__(761);;
 /******/ 	var __webpack_module_cache__ = {};
 /******/ 	
 /******/ 	// The require function
-/******/ 	function __nested_webpack_require_1375993__(moduleId) {
+/******/ 	function __nested_webpack_require_1380216__(moduleId) {
 /******/ 		// Check if module is in cache
 /******/ 		if(__webpack_module_cache__[moduleId]) {
 /******/ 			return __webpack_module_cache__[moduleId].exports;
@@ -45363,7 +45451,7 @@ module.exports = __webpack_require__(761);;
 /******/ 		// Execute the module function
 /******/ 		var threw = true;
 /******/ 		try {
-/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1375993__);
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1380216__);
 /******/ 			threw = false;
 /******/ 		} finally {
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
@@ -45376,11 +45464,11 @@ module.exports = __webpack_require__(761);;
 /************************************************************************/
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
-/******/ 	__nested_webpack_require_1375993__.ab = __dirname + "/";/************************************************************************/
+/******/ 	__nested_webpack_require_1380216__.ab = __dirname + "/";/************************************************************************/
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nested_webpack_require_1375993__(6144);
+/******/ 	return __nested_webpack_require_1380216__(6144);
 /******/ })()
 ;
 
@@ -45397,14 +45485,22 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const generate_roam_site_1 = __importDefault(__webpack_require__(886));
 const core_1 = __webpack_require__(186);
-const runAll = () => generate_roam_site_1.default({
-    roamUsername: core_1.getInput("roam_username"),
-    roamPassword: core_1.getInput("roam_password"),
-    roamGraph: core_1.getInput("roam_graph"),
-    logger: { info: core_1.info, error: core_1.error },
-})
-    .then(() => core_1.info("Done!"))
-    .catch((e) => core_1.setFailed(e.message));
+const path_1 = __importDefault(__webpack_require__(622));
+const fs_1 = __importDefault(__webpack_require__(747));
+const runAll = () => {
+    const configPath = path_1.default.join(__dirname, core_1.getInput("config_path"));
+    return generate_roam_site_1.default({
+        roamUsername: core_1.getInput("roam_username"),
+        roamPassword: core_1.getInput("roam_password"),
+        roamGraph: core_1.getInput("roam_graph"),
+        logger: { info: core_1.info, error: core_1.error },
+        inputConfig: fs_1.default.existsSync(configPath)
+            ? JSON.parse(fs_1.default.readFileSync(configPath).toString())
+            : {},
+    })
+        .then(() => core_1.info("Done!"))
+        .catch((e) => core_1.setFailed(e.message));
+};
 if (process.env.NODE_ENV !== "test") {
     runAll();
 }
