@@ -18,12 +18,12 @@ A GitHub action for generating a static site from a Roam Graph. This action is a
 
 ### `config_path`
 
-**Required** The path to the json file use to override and Roam config settings, relative to `__dirname`. Default value is `static_site.json`.
+**Required** The path to the json file use to override and Roam config settings, relative to `GITHUB_WORKSPACE`. Default value is `static_site.json`.
 
 ## Usage
 
 ```yaml
-uses: dvargas92495/generate-roam-site-action@2.5.1
+uses: dvargas92495/generate-roam-site-action@2.5.2
 with:
     roam_username: dvargas92495@gmail.com
     roam_password: ${{ secrets.ROAM_PASSWORD }}

@@ -4,7 +4,10 @@ import path from "path";
 import fs from "fs";
 
 const runAll = (): Promise<void> => {
-  const configPath = path.join(__dirname, getInput("config_path"));
+  const configPath = path.join(
+    process.env.GITHUB_WORKSPACE || __dirname,
+    getInput("config_path")
+  );
   info(`Config Path: ${configPath}`);
   return run({
     roamUsername: getInput("roam_username"),

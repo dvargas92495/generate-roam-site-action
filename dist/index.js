@@ -45491,7 +45491,7 @@ const core_1 = __webpack_require__(186);
 const path_1 = __importDefault(__webpack_require__(622));
 const fs_1 = __importDefault(__webpack_require__(747));
 const runAll = () => {
-    const configPath = path_1.default.join(__dirname, core_1.getInput("config_path"));
+    const configPath = path_1.default.join(process.env.GITHUB_WORKSPACE || __dirname, core_1.getInput("config_path"));
     core_1.info(`Config Path: ${configPath}`);
     return generate_roam_site_1.default({
         roamUsername: core_1.getInput("roam_username"),
