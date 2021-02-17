@@ -5,7 +5,7 @@ import fs from "fs";
 
 const runAll = (): Promise<void> => {
   const configPath = path.join(__dirname, getInput("config_path"));
-
+  info(`Config Path: ${configPath}`);
   return run({
     roamUsername: getInput("roam_username"),
     roamPassword: getInput("roam_password"),
@@ -15,7 +15,9 @@ const runAll = (): Promise<void> => {
       ? JSON.parse(fs.readFileSync(configPath).toString())
       : {},
   })
-    .then(() => info("Done!"))
+    .then((input) =>
+      info(`Done! Config Used: ${JSON.stringify(input, null, 4)}`)
+    )
     .catch((e) => setFailed(e.message));
 };
 

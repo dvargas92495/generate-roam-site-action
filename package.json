@@ -17,7 +17,7 @@
   "dependencies": {
     "@actions/core": "^1.2.6",
     "@actions/github": "^4.0.0",
-    "generate-roam-site": "^2.5.0"
+    "generate-roam-site": "^2.5.1"
   },
   "devDependencies": {
     "@types/jest": "^26.0.19",

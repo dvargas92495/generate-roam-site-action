@@ -44829,10 +44829,6 @@ const allBlockMapper = (t) => [
     t,
     ...t.children.flatMap(allBlockMapper),
 ];
-const toTextMapper = (t) => ({
-    text: t.text,
-    children: t.children.map(toTextMapper),
-});
 const extractTag = (tag) => tag.startsWith("#[[") && tag.endsWith("]]")
     ? tag.substring(3, tag.length - 2)
     : tag.startsWith("[[") && tag.endsWith("]]")
@@ -44936,7 +44932,7 @@ const getConfigFromPage = (parsedTree) => {
 const convertPageToHtml = ({ name, index }) => name === index
     ? "index.html"
     : `${encodeURIComponent(name.replace(/ /g, "_").replace(/[",?#:$;/@&=+']/g, ""))}.html`;
-const prepareContent = ({ content, index, }) => {
+const prepareContent = ({ content, index, pageNameSet, }) => {
     const filterIgnore = (t) => {
         if (IGNORE_BLOCKS.includes(extractTag(t.text.trim()))) {
             return false;
@@ -44947,9 +44943,15 @@ const prepareContent = ({ content, index, }) => {
     const filteredContent = content.filter(filterIgnore);
     const convertLinks = (t) => {
         t.text = t.text
-            .replace(new RegExp(`#?\\[\\[([^\\]]*)\\]\\]`, "g"), (_, name) => `[${name}](/${convertPageToHtml({ name, index }).replace(/^index\.html$/, "")})`)
-            .replace(new RegExp(`(.*)::`, "g"), (_, name) => `**[${name}:](/${convertPageToHtml({ name, index }).replace(/^index\.html$/, "")})**`)
-            .replace(new RegExp(/#([0-9a-zA-Z\-_/\\]*)/, "g"), (_, name) => `[${name}](/${convertPageToHtml({ name, index }).replace(/^index\.html$/, "")})`)
+            .replace(new RegExp(`#?\\[\\[([^\\]]*)\\]\\]`, "g"), (_, name) => pageNameSet.has(name)
+            ? `[${name}](/${convertPageToHtml({ name, index }).replace(/^index\.html$/, "")})`
+            : name)
+            .replace(new RegExp(`(.*)::`, "g"), (_, name) => pageNameSet.has(name)
+            ? `**[${name}:](/${convertPageToHtml({ name, index }).replace(/^index\.html$/, "")})**`
+            : name)
+            .replace(new RegExp(/#([0-9a-zA-Z\-_/\\]*)/, "g"), (_, name) => pageNameSet.has(name)
+            ? `[${name}](/${convertPageToHtml({ name, index }).replace(/^index\.html$/, "")})`
+            : name)
             .replace(new RegExp("#\\[\\[|\\[\\[|\\]\\]", "g"), "");
         t.children.forEach(convertLinks);
         if (t.heading > 0) {
@@ -44987,11 +44989,12 @@ const convertContentToHtml = ({ content, viewType, level, }) => {
 };
 const renderHtmlFromPage = ({ outputPath, pageContent, p, config, pageNames, }) => {
     const { content, references, title, head } = pageContent;
+    const pageNameSet = new Set(pageNames);
     const preparedContent = prepareContent({
         content,
         index: config.index,
+        pageNameSet,
     });
-    const pageNameSet = new Set(pageNames);
     const markedContent = convertContentToHtml({
         content: preparedContent,
         viewType: pageContent.viewType,
@@ -45172,7 +45175,7 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
             }));
             yield page.close();
             yield browser.close();
-            return { pages, outputPath, config, configPageTree };
+            return { pages, outputPath, config, input };
         }
         catch (e) {
             yield page.screenshot({ path: path_1.default.join(pathRoot, "error.png") });
@@ -45180,7 +45183,7 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
             throw new Error(e);
         }
     }))
-        .then(({ pages, outputPath, config, configPageTree }) => {
+        .then(({ pages, outputPath, config, input }) => {
         const pageNames = Object.keys(pages).sort();
         info(`resolving ${pageNames.length} pages`);
         info(`Here are some: ${pageNames.slice(0, 5)}`);
@@ -45201,7 +45204,7 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
                 pageNames,
             });
         });
-        return configPageTree.map(toTextMapper);
+        return input;
     })
         .catch((e) => {
         error(e.message);
@@ -45436,7 +45439,7 @@ module.exports = __webpack_require__(761);;
 /******/ 	var __webpack_module_cache__ = {};
 /******/ 	
 /******/ 	// The require function
-/******/ 	function __nested_webpack_require_1380216__(moduleId) {
+/******/ 	function __nested_webpack_require_1380656__(moduleId) {
 /******/ 		// Check if module is in cache
 /******/ 		if(__webpack_module_cache__[moduleId]) {
 /******/ 			return __webpack_module_cache__[moduleId].exports;
@@ -45451,7 +45454,7 @@ module.exports = __webpack_require__(761);;
 /******/ 		// Execute the module function
 /******/ 		var threw = true;
 /******/ 		try {
-/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1380216__);
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1380656__);
 /******/ 			threw = false;
 /******/ 		} finally {
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
@@ -45464,11 +45467,11 @@ module.exports = __webpack_require__(761);;
 /************************************************************************/
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
-/******/ 	__nested_webpack_require_1380216__.ab = __dirname + "/";/************************************************************************/
+/******/ 	__nested_webpack_require_1380656__.ab = __dirname + "/";/************************************************************************/
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nested_webpack_require_1380216__(6144);
+/******/ 	return __nested_webpack_require_1380656__(6144);
 /******/ })()
 ;
 
@@ -45489,6 +45492,7 @@ const path_1 = __importDefault(__webpack_require__(622));
 const fs_1 = __importDefault(__webpack_require__(747));
 const runAll = () => {
     const configPath = path_1.default.join(__dirname, core_1.getInput("config_path"));
+    core_1.info(`Config Path: ${configPath}`);
     return generate_roam_site_1.default({
         roamUsername: core_1.getInput("roam_username"),
         roamPassword: core_1.getInput("roam_password"),
@@ -45498,7 +45502,7 @@ const runAll = () => {
             ? JSON.parse(fs_1.default.readFileSync(configPath).toString())
             : {},
     })
-        .then(() => core_1.info("Done!"))
+        .then((input) => core_1.info(`Done! Config Used: ${JSON.stringify(input, null, 4)}`))
         .catch((e) => core_1.setFailed(e.message));
 };
 if (process.env.NODE_ENV !== "test") {
