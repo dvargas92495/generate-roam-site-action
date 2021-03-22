@@ -44815,7 +44815,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.run = exports.renderHtmlFromPage = exports.defaultConfig = void 0;
+exports.run = exports.processSiteData = exports.renderHtmlFromPage = exports.defaultConfig = void 0;
 const path_1 = __importDefault(__nested_webpack_require_1357898__(5622));
 const fs_1 = __importDefault(__nested_webpack_require_1357898__(5747));
 const chrome_aws_lambda_1 = __importDefault(__nested_webpack_require_1357898__(8830));
@@ -44874,7 +44874,10 @@ const DEFAULT_STYLE = `<style>
 `;
 const getTitleRuleFromNode = ({ rule: text, values: children }) => {
     if (text.trim().toUpperCase() === "STARTS WITH" && children.length) {
-        return (title) => title.startsWith(extractTag(children[0]));
+        const tag = extractTag(children[0]);
+        return (title) => {
+            return title.startsWith(tag);
+        };
     }
     return undefined;
 };
@@ -44982,7 +44985,7 @@ const convertContentToHtml = ({ content, viewType, level, }) => {
             return innerHtml;
         }
         const attrs = level > 0 && viewType === "document" ? ` class="document-bullet"` : "";
-        return `<li${attrs}>${innerHtml}</li$>`;
+        return `<li${attrs}>${innerHtml}</li>`;
     });
     const containerTag = level > 0 && viewType === "document" ? "ul" : VIEW_CONTAINER[viewType];
     return `<${containerTag}>${items.join("\n")}</${containerTag}>`;
@@ -45018,6 +45021,31 @@ const renderHtmlFromPage = ({ outputPath, pageContent, p, config, pageNames, }) 
     fs_1.default.writeFileSync(path_1.default.join(outputPath, htmlFileName), hydratedHtml);
 };
 exports.renderHtmlFromPage = renderHtmlFromPage;
+const processSiteData = ({ pages, outputPath, config, info, }) => {
+    info("lets sort");
+    const pageNames = Object.keys(pages).sort();
+    info(`resolving ${pageNames.length} pages`);
+    info(`Here are some: ${pageNames.slice(0, 5)}`);
+    pageNames.map((p) => {
+        if (process.env.NODE_ENV === "test") {
+            try {
+                fs_1.default.writeFileSync(path_1.default.join(outputPath, `${encodeURIComponent(p)}.json`), JSON.stringify(pages[p].content, null, 4));
+            }
+            catch (_a) {
+                console.warn("failed to output md for", p);
+            }
+        }
+        exports.renderHtmlFromPage({
+            outputPath,
+            config,
+            pageContent: pages[p],
+            p,
+            pageNames,
+        });
+    });
+    return config;
+};
+exports.processSiteData = processSiteData;
 const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.log, error: console.error }, pathRoot = process.cwd(), inputConfig = {}, }) => __awaiter(void 0, void 0, void 0, function* () {
     const { info, error } = logger;
     info(`Hello ${roamUsername}! Fetching from ${roamGraph}...`);
@@ -45091,7 +45119,9 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
                     return c;
                 };
                 window.getTreeByPageName = (name) => {
-                    const result = window.roamAlphaAPI.q(`[:find (pull ?e [:block/children :children/view-type]) :where [?e :node/title "${name.replace(/"/g, '\\"')}"]]`);
+                    const result = window.roamAlphaAPI.q(`[:find (pull ?e [:block/children :children/view-type]) :where [?e :node/title "${name
+                        .replace(/\\/, "\\\\")
+                        .replace(/"/g, '\\"')}"]]`);
                     if (!result.length) {
                         return [];
                     }
@@ -45109,50 +45139,59 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
                 ? yield getParsedTree({ page, pageName: configPage })
                 : [];
             const userConfig = getConfigFromPage(configPageTree);
-            const input = Object.assign(Object.assign(Object.assign({}, exports.defaultConfig), userConfig), inputConfig);
-            const titleFilters = input.filter.length
-                ? input.filter.map(getTitleRuleFromNode).filter((f) => !!f)
+            const config = Object.assign(Object.assign(Object.assign({}, exports.defaultConfig), userConfig), inputConfig);
+            const titleFilters = config.filter.length
+                ? config.filter.map(getTitleRuleFromNode).filter((f) => !!f)
                 : [() => false];
-            const contentFilters = input.filter
+            const contentFilters = config.filter
                 .map(getContentRuleFromNode)
                 .filter((f) => !!f);
-            const config = Object.assign(Object.assign({}, input), { titleFilter: (t) => !titleFilters.length || titleFilters.some((r) => r && r(t)), contentFilter: (c) => !contentFilters.length || contentFilters.some((r) => r && r(c)) });
-            info(`quering data ${new Date().toLocaleTimeString()}`);
+            const titleFilter = (t) => !titleFilters.length || titleFilters.some((r) => r && r(t));
+            const contentFilter = (c) => !contentFilters.length || contentFilters.some((r) => r && r(c));
+            info(`querying data ${new Date().toLocaleTimeString()}`);
             const pageNamesWithContent = yield Promise.all(allPageNames
-                .filter((pageName) => pageName === config.index || config.titleFilter(pageName))
+                .filter((pageName) => pageName === config.index || titleFilter(pageName))
                 .filter((pageName) => !CONFIG_PAGE_NAMES.includes(pageName))
                 .map((pageName) => getParsedTree({ page, pageName }).then((content) => ({
                 pageName,
                 content,
             }))));
+            info(`title filtered to ${JSON.stringify(pageNamesWithContent.map(({ pageName }) => pageName))} pages`);
             const entries = yield Promise.all(pageNamesWithContent
-                .filter(({ pageName, content }) => pageName === config.index || config.contentFilter(content))
-                .map(({ pageName, content }) => Promise.all([
-                page.evaluate((pageName) => {
-                    const findParentBlock = (b) => b.title
-                        ? b
-                        : findParentBlock(window.roamAlphaAPI.q(`[:find (pull ?e [*]) :where [?e :block/children ${b.id}]]`)[0][0]);
-                    const parentBlocks = window.roamAlphaAPI
-                        .q(`[:find (pull ?parentPage [*]) :where [?parentPage :block/children ?referencingBlock] [?referencingBlock :block/refs ?referencedPage] [?referencedPage :node/title "${pageName.replace(/"/g, '\\"')}"]]`)
-                        .filter((block) => block.length);
-                    const blocks = parentBlocks.map((b) => findParentBlock(b[0]));
-                    return Array.from(new Set(blocks.map((b) => b.title || "").filter((t) => !!t)));
-                }, pageName),
-                page.evaluate((pageName) => {
-                    var _a, _b;
-                    return ((_b = (_a = window.roamAlphaAPI.q(`[:find ?v :where [?e :children/view-type ?v] [?e :node/title "${pageName.replace(/"/g, '\\"')}"]]`)) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b[0]) || "bullet";
-                }, pageName),
-            ])
-                .then(([references, viewType]) => ({
-                references,
-                pageName,
-                content,
-                viewType,
-            }))
-                .catch((e) => {
-                console.error("Failed to find references for page", pageName);
-                throw new Error(e);
-            })));
+                .filter(({ pageName, content }) => pageName === config.index || contentFilter(content))
+                .map(({ pageName, content }) => {
+                return Promise.all([
+                    page.evaluate((pageName) => {
+                        const findParentBlock = (b) => b.title
+                            ? b
+                            : findParentBlock(window.roamAlphaAPI.q(`[:find (pull ?e [*]) :where [?e :block/children ${b.id}]]`)[0][0]);
+                        const parentBlocks = window.roamAlphaAPI
+                            .q(`[:find (pull ?parentPage [*]) :where [?parentPage :block/children ?referencingBlock] [?referencingBlock :block/refs ?referencedPage] [?referencedPage :node/title "${pageName
+                            .replace(/\\/, "\\\\")
+                            .replace(/"/g, '\\"')}"]]`)
+                            .filter((block) => block.length);
+                        const blocks = parentBlocks.map((b) => findParentBlock(b[0]));
+                        return Array.from(new Set(blocks.map((b) => b.title || "").filter((t) => !!t)));
+                    }, pageName),
+                    page.evaluate((pageName) => {
+                        var _a, _b;
+                        return ((_b = (_a = window.roamAlphaAPI.q(`[:find ?v :where [?e :children/view-type ?v] [?e :node/title "${pageName
+                            .replace(/\\/, "\\\\")
+                            .replace(/"/g, '\\"')}"]]`)) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b[0]) || "bullet";
+                    }, pageName),
+                ])
+                    .then(([references, viewType]) => ({
+                    references,
+                    pageName,
+                    content,
+                    viewType,
+                }))
+                    .catch((e) => {
+                    console.error("Failed to find references for page", pageName);
+                    throw new Error(e);
+                });
+            }));
+            info(`content filtered to ${entries.length} entries`);
             const pages = Object.fromEntries(entries.map(({ content, pageName, references, viewType }) => {
                 var _a, _b, _c, _d, _e, _f, _g, _h;
                 const allBlocks = content.flatMap(allBlockMapper);
@@ -45173,9 +45212,12 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
                     },
                 ];
             }));
+            info("closing browser");
             yield page.close();
-            yield browser.close();
-            return { pages, outputPath, config, input };
+            info("closing browser");
+            browser.close();
+            info("returning data");
+            return { pages, outputPath, config };
         }
         catch (e) {
             yield page.screenshot({ path: path_1.default.join(pathRoot, "error.png") });
@@ -45183,29 +45225,7 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
             throw new Error(e);
         }
     }))
-        .then(({ pages, outputPath, config, input }) => {
-        const pageNames = Object.keys(pages).sort();
-        info(`resolving ${pageNames.length} pages`);
-        info(`Here are some: ${pageNames.slice(0, 5)}`);
-        pageNames.map((p) => {
-            if (process.env.NODE_ENV === "test") {
-                try {
-                    fs_1.default.writeFileSync(path_1.default.join(outputPath, `${encodeURIComponent(p)}.json`), JSON.stringify(pages[p].content, null, 4));
-                }
-                catch (_a) {
-                    console.warn("failed to output md for", p);
-                }
-            }
-            exports.renderHtmlFromPage({
-                outputPath,
-                config,
-                pageContent: pages[p],
-                p,
-                pageNames,
-            });
-        });
-        return input;
-    })
+        .then((d) => exports.processSiteData(Object.assign(Object.assign({}, d), { info })))
         .catch((e) => {
         error(e.message);
         throw new Error(e);
@@ -45439,7 +45459,7 @@ module.exports = __webpack_require__(761);;
 /******/ 	var __webpack_module_cache__ = {};
 /******/ 	
 /******/ 	// The require function
-/******/ 	function __nested_webpack_require_1380656__(moduleId) {
+/******/ 	function __nested_webpack_require_1381047__(moduleId) {
 /******/ 		// Check if module is in cache
 /******/ 		if(__webpack_module_cache__[moduleId]) {
 /******/ 			return __webpack_module_cache__[moduleId].exports;
@@ -45454,7 +45474,7 @@ module.exports = __webpack_require__(761);;
 /******/ 		// Execute the module function
 /******/ 		var threw = true;
 /******/ 		try {
-/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1380656__);
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1381047__);
 /******/ 			threw = false;
 /******/ 		} finally {
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
@@ -45467,11 +45487,11 @@ module.exports = __webpack_require__(761);;
 /************************************************************************/
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
-/******/ 	__nested_webpack_require_1380656__.ab = __dirname + "/";/************************************************************************/
+/******/ 	__nested_webpack_require_1381047__.ab = __dirname + "/";/************************************************************************/
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nested_webpack_require_1380656__(6144);
+/******/ 	return __nested_webpack_require_1381047__(6144);
 /******/ })()
 ;
 
