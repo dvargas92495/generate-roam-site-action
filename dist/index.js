@@ -53298,17 +53298,9 @@ const prepareContent = ({ content, index, pageNameSet, }) => {
     };
     const filteredContent = content.filter(filterIgnore);
     const convertLinks = (t) => {
-        t.text = t.text
-            .replace(new RegExp(`#?\\[\\[([^\\]]*)\\]\\]`, "g"), (_, name) => pageNameSet.has(name)
-            ? `[${name}](/${convertPageToHtml({ name, index }).replace(/^index\.html$/, "")})`
-            : name)
-            .replace(new RegExp(`(.*)::`, "g"), (_, name) => pageNameSet.has(name)
+        t.text = t.text.replace(new RegExp(`(.*)::`, "g"), (_, name) => pageNameSet.has(name)
             ? `**[${name}:](/${convertPageToHtml({ name, index }).replace(/^index\.html$/, "")})**`
-            : name)
-            .replace(new RegExp(/#([0-9a-zA-Z\-_/\\]*)/, "g"), (_, name) => pageNameSet.has(name)
-            ? `[${name}](/${convertPageToHtml({ name, index }).replace(/^index\.html$/, "")})`
-            : name)
-            .replace(new RegExp("#\\[\\[|\\[\\[|\\]\\]", "g"), "");
+            : name);
         t.children.forEach(convertLinks);
         if (t.heading > 0) {
             t.text = `${"".padStart(t.heading, "#")} ${t.text}`;
@@ -53322,16 +53314,17 @@ const VIEW_CONTAINER = {
     document: "div",
     numbered: "ol",
 };
-const convertContentToHtml = ({ content, viewType, level, }) => {
+const convertContentToHtml = ({ content, viewType, level, pagesToHrefs, }) => {
     if (content.length === 0) {
         return "";
     }
     const items = content.map((t) => {
-        const inlineMarked = roam_marked_1.default(t.text);
+        const inlineMarked = roam_marked_1.default(t.text, { pagesToHrefs });
         const children = convertContentToHtml({
             content: t.children,
             viewType: t.viewType,
             level: level + 1,
+            pagesToHrefs,
         });
         const innerHtml = `${inlineMarked}\n${children}`;
         if (level === 0 && viewType === "document") {
@@ -53355,6 +53348,9 @@ const renderHtmlFromPage = ({ outputPath, pageContent, p, config, pageNames, }) 
         content: preparedContent,
         viewType: pageContent.viewType,
         level: 0,
+        pagesToHrefs: (name) => pageNameSet.has(name)
+            ? `/${convertPageToHtml({ name, index: config.index }).replace(/^index\.html$/, "")})`
+            : "",
     });
     const hydratedHtml = config.template
         .replace("</head>", `${DEFAULT_STYLE}${head}</head>`)
@@ -53812,7 +53808,7 @@ module.exports = __webpack_require__(761);;
 /******/ 	var __webpack_module_cache__ = {};
 /******/ 	
 /******/ 	// The require function
-/******/ 	function __nested_webpack_require_1746405__(moduleId) {
+/******/ 	function __nested_webpack_require_1746126__(moduleId) {
 /******/ 		// Check if module is in cache
 /******/ 		if(__webpack_module_cache__[moduleId]) {
 /******/ 			return __webpack_module_cache__[moduleId].exports;
@@ -53827,7 +53823,7 @@ module.exports = __webpack_require__(761);;
 /******/ 		// Execute the module function
 /******/ 		var threw = true;
 /******/ 		try {
-/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1746405__);
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1746126__);
 /******/ 			threw = false;
 /******/ 		} finally {
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
@@ -53840,11 +53836,11 @@ module.exports = __webpack_require__(761);;
 /************************************************************************/
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
-/******/ 	__nested_webpack_require_1746405__.ab = __dirname + "/";/************************************************************************/
+/******/ 	__nested_webpack_require_1746126__.ab = __dirname + "/";/************************************************************************/
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nested_webpack_require_1746405__(6144);
+/******/ 	return __nested_webpack_require_1746126__(6144);
 /******/ })()
 ;
 
