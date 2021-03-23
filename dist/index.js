@@ -53349,7 +53349,7 @@ const renderHtmlFromPage = ({ outputPath, pageContent, p, config, pageNames, }) 
         viewType: pageContent.viewType,
         level: 0,
         pagesToHrefs: (name) => pageNameSet.has(name)
-            ? `/${convertPageToHtml({ name, index: config.index }).replace(/^index\.html$/, "")})`
+            ? `/${convertPageToHtml({ name, index: config.index }).replace(/^index\.html$/, "")}`
             : "",
     });
     const hydratedHtml = config.template
@@ -53808,7 +53808,7 @@ module.exports = __webpack_require__(761);;
 /******/ 	var __webpack_module_cache__ = {};
 /******/ 	
 /******/ 	// The require function
-/******/ 	function __nested_webpack_require_1746126__(moduleId) {
+/******/ 	function __nested_webpack_require_1746125__(moduleId) {
 /******/ 		// Check if module is in cache
 /******/ 		if(__webpack_module_cache__[moduleId]) {
 /******/ 			return __webpack_module_cache__[moduleId].exports;
@@ -53823,7 +53823,7 @@ module.exports = __webpack_require__(761);;
 /******/ 		// Execute the module function
 /******/ 		var threw = true;
 /******/ 		try {
-/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1746126__);
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_1746125__);
 /******/ 			threw = false;
 /******/ 		} finally {
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
@@ -53836,11 +53836,11 @@ module.exports = __webpack_require__(761);;
 /************************************************************************/
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
-/******/ 	__nested_webpack_require_1746126__.ab = __dirname + "/";/************************************************************************/
+/******/ 	__nested_webpack_require_1746125__.ab = __dirname + "/";/************************************************************************/
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nested_webpack_require_1746126__(6144);
+/******/ 	return __nested_webpack_require_1746125__(6144);
 /******/ })()
 ;
 
