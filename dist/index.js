@@ -68650,7 +68650,7 @@ const MonthLog = ({ month, year, html }) => {
     return react_1.default.createElement("div", {}, react_1.default.createElement("h3", {
         style: { cursor: "pointer", userSelect: "none" },
         onClick: () => setShow(!show),
-    }, `${show ? "▿" : "▹"} ${months[month]} ${year}`), react_1.default.createElement("hr"), react_1.default.createElement("div", {
+    }, `${months[month]} ${year}`), react_1.default.createElement("div", {
         dangerouslySetInnerHTML: { __html: html },
         style: { display: show ? "block" : "none" },
     }));
@@ -68670,7 +68670,7 @@ exports.default = DailyLog;
 /***/ }),
 
 /***/ 6144:
-/***/ (function(__unused_webpack_module, exports, __nested_webpack_require_2242811__) {
+/***/ (function(__unused_webpack_module, exports, __nested_webpack_require_2242754__) {
 
 "use strict";
 
@@ -68699,18 +68699,19 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = exports.processSiteData = exports.renderHtmlFromPage = exports.defaultConfig = void 0;
-const path_1 = __importDefault(__nested_webpack_require_2242811__(5622));
-const fs_1 = __importDefault(__nested_webpack_require_2242811__(5747));
-const chrome_aws_lambda_1 = __importDefault(__nested_webpack_require_2242811__(8830));
-const roam_marked_1 = __importDefault(__nested_webpack_require_2242811__(8480));
-const roam_client_1 = __nested_webpack_require_2242811__(5016);
-const react_1 = __importDefault(__nested_webpack_require_2242811__(8444));
-const server_1 = __importDefault(__nested_webpack_require_2242811__(7262));
-const DailyLog_1 = __importDefault(__nested_webpack_require_2242811__(7835));
+const path_1 = __importDefault(__nested_webpack_require_2242754__(5622));
+const fs_1 = __importDefault(__nested_webpack_require_2242754__(5747));
+const chrome_aws_lambda_1 = __importDefault(__nested_webpack_require_2242754__(8830));
+const roam_marked_1 = __importDefault(__nested_webpack_require_2242754__(8480));
+const roam_client_1 = __nested_webpack_require_2242754__(5016);
+const react_1 = __importDefault(__nested_webpack_require_2242754__(8444));
+const server_1 = __importDefault(__nested_webpack_require_2242754__(7262));
+const DailyLog_1 = __importDefault(__nested_webpack_require_2242754__(7835));
 const CONFIG_PAGE_NAMES = ["roam/js/static-site", "roam/js/public-garden"];
 const IGNORE_BLOCKS = CONFIG_PAGE_NAMES.map((c) => `${c}/ignore`);
 const TITLE_REGEX = new RegExp(`(?:${CONFIG_PAGE_NAMES.map((c) => `${c.replace("/", "\\/")}/title`).join("|")})::(.*)`);
 const HEAD_REGEX = new RegExp(`(?:${CONFIG_PAGE_NAMES.map((c) => `${c.replace("/", "\\/")}/head`).join("|")})::`);
+const DESCRIPTION_REGEX = new RegExp(`(?:${CONFIG_PAGE_NAMES.map((c) => `${c.replace("/", "\\/")}/description`).join("|")})::(.*)`);
 const HTML_REGEX = new RegExp("```html\n(.*)```", "s");
 const DAILY_NOTE_PAGE_REGEX = /(January|February|March|April|May|June|July|August|September|October|November|December) [0-3]?[0-9](st|nd|rd|th), [0-9][0-9][0-9][0-9]/;
 const allBlockMapper = (t) => [
@@ -68726,8 +68727,7 @@ const extractTag = (tag) => tag.startsWith("#[[") && tag.endsWith("]]")
             : tag;
 /**
  *
-<meta name="description" content="$\{PAGE_DESCRIPTION}"/>
-<meta property="og:description" content="$\{PAGE_DESCRIPTION}">
+
  onload="bodyOnLoad();"
  */
 exports.defaultConfig = {
@@ -68737,6 +68737,8 @@ exports.defaultConfig = {
 <html>
 <head>
 <meta charset="utf-8"/>
+<meta name="description" content="$\{PAGE_DESCRIPTION}"/>
+<meta property="og:description" content="$\{PAGE_DESCRIPTION}">
 <title>$\{PAGE_NAME}</title>
 <meta property="og:title" content="$\{PAGE_NAME}">
 <meta property="og:type" content="website">
@@ -68951,7 +68953,7 @@ const convertContentToHtml = ({ content, viewType, level, pagesToHrefs, componen
     return `<${containerTag}>${items.join("\n")}</${containerTag}>`;
 };
 const renderHtmlFromPage = ({ outputPath, pageContent, p, config, pageNames, }) => {
-    const { content, references, title, head } = pageContent;
+    const { content, references, title, head, description } = pageContent;
     const pageNameSet = new Set(pageNames);
     const preparedContent = prepareContent({
         content,
@@ -69034,6 +69036,7 @@ const renderHtmlFromPage = ({ outputPath, pageContent, p, config, pageNames, }) 
     const hydratedHtml = config.template
         .replace("</head>", `${DEFAULT_STYLE}${head}</head>`)
         .replace(/\${PAGE_NAME}/g, title)
+        .replace(/\${PAGE_DESCRIPTION}/g, description)
         .replace(/\${PAGE_CONTENT}/g, markedContent)
         .replace(/\${REFERENCES}/g, references
         .filter((r) => pageNameSet.has(r.title))
@@ -69220,14 +69223,19 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
             }));
             info(`content filtered to ${entries.length} entries`);
             const pages = Object.fromEntries(entries.map(({ content, pageName, references, viewType }) => {
-                var _a, _b, _c, _d, _e, _f, _g, _h;
+                var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
                 const allBlocks = content.flatMap(allBlockMapper);
                 const titleMatch = (_c = (_b = (_a = allBlocks
                     .find((s) => TITLE_REGEX.test(s.text))) === null || _a === void 0 ? void 0 : _a.text) === null || _b === void 0 ? void 0 : _b.match) === null || _c === void 0 ? void 0 : _c.call(_b, TITLE_REGEX);
                 const headMatch = (_h = (_g = (_f = (_e = (_d = allBlocks
                     .find((s) => HEAD_REGEX.test(s.text))) === null || _d === void 0 ? void 0 : _d.children) === null || _e === void 0 ? void 0 : _e[0]) === null || _f === void 0 ? void 0 : _f.text) === null || _g === void 0 ? void 0 : _g.match) === null || _h === void 0 ? void 0 : _h.call(_g, HTML_REGEX);
+                const descriptionMatch = (_l = (_k = (_j = allBlocks
+                    .find((s) => DESCRIPTION_REGEX.test(s.text))) === null || _j === void 0 ? void 0 : _j.text) === null || _k === void 0 ? void 0 : _k.match) === null || _l === void 0 ? void 0 : _l.call(_k, DESCRIPTION_REGEX);
                 const title = titleMatch ? titleMatch[1].trim() : pageName;
                 const head = headMatch ? headMatch[1] : "";
+                const description = descriptionMatch
+                    ? descriptionMatch[1].trim()
+                    : "";
                 return [
                     pageName,
                     {
@@ -69235,6 +69243,7 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
                         references,
                         title,
                         head,
+                        description,
                         viewType,
                     },
                 ];
@@ -69494,7 +69503,7 @@ module.exports = __webpack_require__(761);;
 /******/ 	var __webpack_module_cache__ = {};
 /******/ 	
 /******/ 	// The require function
-/******/ 	function __nested_webpack_require_2275515__(moduleId) {
+/******/ 	function __nested_webpack_require_2276134__(moduleId) {
 /******/ 		// Check if module is in cache
 /******/ 		if(__webpack_module_cache__[moduleId]) {
 /******/ 			return __webpack_module_cache__[moduleId].exports;
@@ -69509,7 +69518,7 @@ module.exports = __webpack_require__(761);;
 /******/ 		// Execute the module function
 /******/ 		var threw = true;
 /******/ 		try {
-/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_2275515__);
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_2276134__);
 /******/ 			threw = false;
 /******/ 		} finally {
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
@@ -69522,11 +69531,11 @@ module.exports = __webpack_require__(761);;
 /************************************************************************/
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
-/******/ 	__nested_webpack_require_2275515__.ab = __dirname + "/";/************************************************************************/
+/******/ 	__nested_webpack_require_2276134__.ab = __dirname + "/";/************************************************************************/
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nested_webpack_require_2275515__(6144);
+/******/ 	return __nested_webpack_require_2276134__(6144);
 /******/ })()
 ;
 
