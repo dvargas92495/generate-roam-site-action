@@ -58202,7 +58202,8 @@ const BOLD_REGEX = /^\*\*(.*?)\*\*/;
 const ITALICS_REGEX = /^__(.*?)__/;
 const HIGHLIGHT_REGEX = /^\^\^([^^]*)\^\^/;
 const INLINE_STOP_REGEX = /({{|\*\*|__|\^\^|#?\[\[|#[^\s]|\(\(|\[(.*?)\]\((.*?)\))/;
-const HTML_REGEXES = [HIGHLIGHT_REGEX, BUTTON_REGEX, BLOCK_REF_REGEX];
+const HR_REGEX = /^---$/;
+const HTML_REGEXES = [HIGHLIGHT_REGEX, BUTTON_REGEX, BLOCK_REF_REGEX, HR_REGEX];
 const defaultComponents = (component, afterColon) => {
     var _a;
     const opts = ((_a = afterColon === null || afterColon === void 0 ? void 0 : afterColon.trim) === null || _a === void 0 ? void 0 : _a.call(afterColon)) || "";
@@ -58492,6 +58493,9 @@ const opts = {
             else if (DONE_REGEX.test(text)) {
                 return RENDERED_DONE;
             }
+            else if (HR_REGEX.test(text)) {
+                return "<hr>";
+            }
             else if (IFRAME_REGEX.test(text)) {
                 const match = IFRAME_REGEX.exec(text);
                 return `<iframe src="${match === null || match === void 0 ? void 0 : match[1]}" frameborder="0" height="100%" width="100%"></iframe>`;
@@ -58504,7 +58508,7 @@ const opts = {
                 const match = ((_a = BUTTON_REGEX.exec(text)) === null || _a === void 0 ? void 0 : _a[1]) || "";
                 const afterColon = (_b = BUTTON_REGEX.exec(text)) === null || _b === void 0 ? void 0 : _b[2];
                 const context = this.context();
-                return (((_c = context.components) === null || _c === void 0 ? void 0 : _c.call(context, match)) ||
+                return (((_c = context.components) === null || _c === void 0 ? void 0 : _c.call(context, match, afterColon)) ||
                     defaultComponents(match, afterColon) ||
                     `<button>${match}</button>`);
             }
@@ -58548,7 +58552,7 @@ exports.default = contextualize(marked_1.default);
 /******/ 	var __webpack_module_cache__ = {};
 /******/ 	
 /******/ 	// The require function
-/******/ 	function __nested_webpack_require_434661__(moduleId) {
+/******/ 	function __nested_webpack_require_434798__(moduleId) {
 /******/ 		// Check if module is in cache
 /******/ 		if(__webpack_module_cache__[moduleId]) {
 /******/ 			return __webpack_module_cache__[moduleId].exports;
@@ -58563,7 +58567,7 @@ exports.default = contextualize(marked_1.default);
 /******/ 		// Execute the module function
 /******/ 		var threw = true;
 /******/ 		try {
-/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_434661__);
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_434798__);
 /******/ 			threw = false;
 /******/ 		} finally {
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
@@ -58576,21 +58580,21 @@ exports.default = contextualize(marked_1.default);
 /************************************************************************/
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
-/******/ 	__nested_webpack_require_434661__.ab = __dirname + "/";/************************************************************************/
+/******/ 	__nested_webpack_require_434798__.ab = __dirname + "/";/************************************************************************/
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nested_webpack_require_434661__(6144);
+/******/ 	return __nested_webpack_require_434798__(6144);
 /******/ })()
 ;
 
 /***/ }),
 
 /***/ 1867:
-/***/ ((module, exports, __nested_webpack_require_1949176__) => {
+/***/ ((module, exports, __nested_webpack_require_1949313__) => {
 
 /* eslint-disable node/no-deprecated-api */
-var buffer = __nested_webpack_require_1949176__(4293)
+var buffer = __nested_webpack_require_1949313__(4293)
 var Buffer = buffer.Buffer
 
 // alternative to using Object.keys for old browsers
@@ -58656,7 +58660,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
 /***/ }),
 
 /***/ 4841:
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_1950807__) => {
+/***/ ((__unused_webpack_module, exports, __nested_webpack_require_1950944__) => {
 
 "use strict";
 // Copyright Joyent, Inc. and other Node contributors.
@@ -58684,7 +58688,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
 
 /*<replacement>*/
 
-var Buffer = __nested_webpack_require_1950807__(1867).Buffer;
+var Buffer = __nested_webpack_require_1950944__(1867).Buffer;
 /*</replacement>*/
 
 var isEncoding = Buffer.isEncoding || function (encoding) {
@@ -58959,13 +58963,13 @@ function simpleEnd(buf) {
 /***/ }),
 
 /***/ 9318:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1960358__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1960495__) => {
 
 "use strict";
 
-const os = __nested_webpack_require_1960358__(2087);
-const tty = __nested_webpack_require_1960358__(3867);
-const hasFlag = __nested_webpack_require_1960358__(1621);
+const os = __nested_webpack_require_1960495__(2087);
+const tty = __nested_webpack_require_1960495__(3867);
+const hasFlag = __nested_webpack_require_1960495__(1621);
 
 const {env} = process;
 
@@ -59102,15 +59106,15 @@ module.exports = {
 /***/ }),
 
 /***/ 366:
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_1963229__) => {
+/***/ ((__unused_webpack_module, exports, __nested_webpack_require_1963366__) => {
 
-var chownr = __nested_webpack_require_1963229__(9051)
-var tar = __nested_webpack_require_1963229__(2283)
-var pump = __nested_webpack_require_1963229__(8341)
-var mkdirp = __nested_webpack_require_1963229__(7614)
-var fs = __nested_webpack_require_1963229__(5747)
-var path = __nested_webpack_require_1963229__(5622)
-var os = __nested_webpack_require_1963229__(2087)
+var chownr = __nested_webpack_require_1963366__(9051)
+var tar = __nested_webpack_require_1963366__(2283)
+var pump = __nested_webpack_require_1963366__(8341)
+var mkdirp = __nested_webpack_require_1963366__(7614)
+var fs = __nested_webpack_require_1963366__(5747)
+var path = __nested_webpack_require_1963366__(5622)
+var os = __nested_webpack_require_1963366__(2087)
 
 var win32 = os.platform() === 'win32'
 
@@ -59460,14 +59464,14 @@ function mkdirfix (name, opts, cb) {
 /***/ }),
 
 /***/ 7882:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1972966__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1973103__) => {
 
-var util = __nested_webpack_require_1972966__(1669)
-var bl = __nested_webpack_require_1972966__(336)
-var headers = __nested_webpack_require_1972966__(8860)
+var util = __nested_webpack_require_1973103__(1669)
+var bl = __nested_webpack_require_1973103__(336)
+var headers = __nested_webpack_require_1973103__(8860)
 
-var Writable = __nested_webpack_require_1972966__(9822).Writable
-var PassThrough = __nested_webpack_require_1972966__(9822).PassThrough
+var Writable = __nested_webpack_require_1973103__(9822).Writable
+var PassThrough = __nested_webpack_require_1973103__(9822).PassThrough
 
 var noop = function () {}
 
@@ -60026,10 +60030,10 @@ exports.decode = function (buf, filenameEncoding, allowUnknownFormat) {
 /***/ }),
 
 /***/ 2283:
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_1987086__) => {
+/***/ ((__unused_webpack_module, exports, __nested_webpack_require_1987223__) => {
 
-exports.extract = __nested_webpack_require_1987086__(7882)
-exports.pack = __nested_webpack_require_1987086__(4930)
+exports.extract = __nested_webpack_require_1987223__(7882)
+exports.pack = __nested_webpack_require_1987223__(4930)
 
 
 /***/ }),
@@ -60159,7 +60163,7 @@ module.exports.q = codes;
 /***/ }),
 
 /***/ 11:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1991022__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1991159__) => {
 
 "use strict";
 // Copyright Joyent, Inc. and other Node contributors.
@@ -60203,11 +60207,11 @@ var objectKeys = Object.keys || function (obj) {
 
 module.exports = Duplex;
 
-var Readable = __nested_webpack_require_1991022__(3588);
+var Readable = __nested_webpack_require_1991159__(3588);
 
-var Writable = __nested_webpack_require_1991022__(8946);
+var Writable = __nested_webpack_require_1991159__(8946);
 
-__nested_webpack_require_1991022__(4124)(Duplex, Readable);
+__nested_webpack_require_1991159__(4124)(Duplex, Readable);
 
 {
   // Allow the keys array to be GC'ed.
@@ -60305,7 +60309,7 @@ Object.defineProperty(Duplex.prototype, 'destroyed', {
 /***/ }),
 
 /***/ 3392:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1995514__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1995651__) => {
 
 "use strict";
 // Copyright Joyent, Inc. and other Node contributors.
@@ -60335,9 +60339,9 @@ Object.defineProperty(Duplex.prototype, 'destroyed', {
 
 module.exports = PassThrough;
 
-var Transform = __nested_webpack_require_1995514__(4472);
+var Transform = __nested_webpack_require_1995651__(4472);
 
-__nested_webpack_require_1995514__(4124)(PassThrough, Transform);
+__nested_webpack_require_1995651__(4124)(PassThrough, Transform);
 
 function PassThrough(options) {
   if (!(this instanceof PassThrough)) return new PassThrough(options);
@@ -60351,7 +60355,7 @@ PassThrough.prototype._transform = function (chunk, encoding, cb) {
 /***/ }),
 
 /***/ 3588:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1997240__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_1997377__) => {
 
 "use strict";
 // Copyright Joyent, Inc. and other Node contributors.
@@ -60385,7 +60389,7 @@ var Duplex;
 Readable.ReadableState = ReadableState;
 /*<replacement>*/
 
-var EE = __nested_webpack_require_1997240__(8614).EventEmitter;
+var EE = __nested_webpack_require_1997377__(8614).EventEmitter;
 
 var EElistenerCount = function EElistenerCount(emitter, type) {
   return emitter.listeners(type).length;
@@ -60395,11 +60399,11 @@ var EElistenerCount = function EElistenerCount(emitter, type) {
 /*<replacement>*/
 
 
-var Stream = __nested_webpack_require_1997240__(4727);
+var Stream = __nested_webpack_require_1997377__(4727);
 /*</replacement>*/
 
 
-var Buffer = __nested_webpack_require_1997240__(4293).Buffer;
+var Buffer = __nested_webpack_require_1997377__(4293).Buffer;
 
 var OurUint8Array = global.Uint8Array || function () {};
 
@@ -60413,7 +60417,7 @@ function _isUint8Array(obj) {
 /*<replacement>*/
 
 
-var debugUtil = __nested_webpack_require_1997240__(1669);
+var debugUtil = __nested_webpack_require_1997377__(1669);
 
 var debug;
 
@@ -60425,14 +60429,14 @@ if (debugUtil && debugUtil.debuglog) {
 /*</replacement>*/
 
 
-var BufferList = __nested_webpack_require_1997240__(2155);
+var BufferList = __nested_webpack_require_1997377__(2155);
 
-var destroyImpl = __nested_webpack_require_1997240__(9543);
+var destroyImpl = __nested_webpack_require_1997377__(9543);
 
-var _require = __nested_webpack_require_1997240__(396),
+var _require = __nested_webpack_require_1997377__(396),
     getHighWaterMark = _require.getHighWaterMark;
 
-var _require$codes = __nested_webpack_require_1997240__(4100)/* .codes */ .q,
+var _require$codes = __nested_webpack_require_1997377__(4100)/* .codes */ .q,
     ERR_INVALID_ARG_TYPE = _require$codes.ERR_INVALID_ARG_TYPE,
     ERR_STREAM_PUSH_AFTER_EOF = _require$codes.ERR_STREAM_PUSH_AFTER_EOF,
     ERR_METHOD_NOT_IMPLEMENTED = _require$codes.ERR_METHOD_NOT_IMPLEMENTED,
@@ -60443,7 +60447,7 @@ var StringDecoder;
 var createReadableStreamAsyncIterator;
 var from;
 
-__nested_webpack_require_1997240__(4124)(Readable, Stream);
+__nested_webpack_require_1997377__(4124)(Readable, Stream);
 
 var errorOrDestroy = destroyImpl.errorOrDestroy;
 var kProxyEvents = ['error', 'close', 'destroy', 'pause', 'resume'];
@@ -60460,7 +60464,7 @@ function prependListener(emitter, event, fn) {
 }
 
 function ReadableState(options, stream, isDuplex) {
-  Duplex = Duplex || __nested_webpack_require_1997240__(11);
+  Duplex = Duplex || __nested_webpack_require_1997377__(11);
   options = options || {}; // Duplex streams are both readable and writable, but share
   // the same options object.
   // However, some cases require setting options to different
@@ -60516,14 +60520,14 @@ function ReadableState(options, stream, isDuplex) {
   this.encoding = null;
 
   if (options.encoding) {
-    if (!StringDecoder) StringDecoder = __nested_webpack_require_1997240__(4841)/* .StringDecoder */ .s;
+    if (!StringDecoder) StringDecoder = __nested_webpack_require_1997377__(4841)/* .StringDecoder */ .s;
     this.decoder = new StringDecoder(options.encoding);
     this.encoding = options.encoding;
   }
 }
 
 function Readable(options) {
-  Duplex = Duplex || __nested_webpack_require_1997240__(11);
+  Duplex = Duplex || __nested_webpack_require_1997377__(11);
   if (!(this instanceof Readable)) return new Readable(options); // Checking for a Stream.Duplex instance is faster here instead of inside
   // the ReadableState constructor, at least with V8 6.5
 
@@ -60678,7 +60682,7 @@ Readable.prototype.isPaused = function () {
 
 
 Readable.prototype.setEncoding = function (enc) {
-  if (!StringDecoder) StringDecoder = __nested_webpack_require_1997240__(4841)/* .StringDecoder */ .s;
+  if (!StringDecoder) StringDecoder = __nested_webpack_require_1997377__(4841)/* .StringDecoder */ .s;
   var decoder = new StringDecoder(enc);
   this._readableState.decoder = decoder; // If setEncoding(null), decoder.encoding equals utf8
 
@@ -61362,7 +61366,7 @@ Readable.prototype.wrap = function (stream) {
 if (typeof Symbol === 'function') {
   Readable.prototype[Symbol.asyncIterator] = function () {
     if (createReadableStreamAsyncIterator === undefined) {
-      createReadableStreamAsyncIterator = __nested_webpack_require_1997240__(5720);
+      createReadableStreamAsyncIterator = __nested_webpack_require_1997377__(5720);
     }
 
     return createReadableStreamAsyncIterator(this);
@@ -61464,7 +61468,7 @@ function endReadableNT(state, stream) {
 if (typeof Symbol === 'function') {
   Readable.from = function (iterable, opts) {
     if (from === undefined) {
-      from = __nested_webpack_require_1997240__(1935);
+      from = __nested_webpack_require_1997377__(1935);
     }
 
     return from(Readable, iterable, opts);
@@ -61482,7 +61486,7 @@ function indexOf(xs, x) {
 /***/ }),
 
 /***/ 4472:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2033283__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2033420__) => {
 
 "use strict";
 // Copyright Joyent, Inc. and other Node contributors.
@@ -61550,15 +61554,15 @@ function indexOf(xs, x) {
 
 module.exports = Transform;
 
-var _require$codes = __nested_webpack_require_2033283__(4100)/* .codes */ .q,
+var _require$codes = __nested_webpack_require_2033420__(4100)/* .codes */ .q,
     ERR_METHOD_NOT_IMPLEMENTED = _require$codes.ERR_METHOD_NOT_IMPLEMENTED,
     ERR_MULTIPLE_CALLBACK = _require$codes.ERR_MULTIPLE_CALLBACK,
     ERR_TRANSFORM_ALREADY_TRANSFORMING = _require$codes.ERR_TRANSFORM_ALREADY_TRANSFORMING,
     ERR_TRANSFORM_WITH_LENGTH_0 = _require$codes.ERR_TRANSFORM_WITH_LENGTH_0;
 
-var Duplex = __nested_webpack_require_2033283__(11);
+var Duplex = __nested_webpack_require_2033420__(11);
 
-__nested_webpack_require_2033283__(4124)(Transform, Duplex);
+__nested_webpack_require_2033420__(4124)(Transform, Duplex);
 
 function afterTransform(er, data) {
   var ts = this._transformState;
@@ -61690,7 +61694,7 @@ function done(stream, er, data) {
 /***/ }),
 
 /***/ 8946:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2041341__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2041478__) => {
 
 "use strict";
 // Copyright Joyent, Inc. and other Node contributors.
@@ -61752,17 +61756,17 @@ Writable.WritableState = WritableState;
 /*<replacement>*/
 
 var internalUtil = {
-  deprecate: __nested_webpack_require_2041341__(5278)
+  deprecate: __nested_webpack_require_2041478__(5278)
 };
 /*</replacement>*/
 
 /*<replacement>*/
 
-var Stream = __nested_webpack_require_2041341__(4727);
+var Stream = __nested_webpack_require_2041478__(4727);
 /*</replacement>*/
 
 
-var Buffer = __nested_webpack_require_2041341__(4293).Buffer;
+var Buffer = __nested_webpack_require_2041478__(4293).Buffer;
 
 var OurUint8Array = global.Uint8Array || function () {};
 
@@ -61774,12 +61778,12 @@ function _isUint8Array(obj) {
   return Buffer.isBuffer(obj) || obj instanceof OurUint8Array;
 }
 
-var destroyImpl = __nested_webpack_require_2041341__(9543);
+var destroyImpl = __nested_webpack_require_2041478__(9543);
 
-var _require = __nested_webpack_require_2041341__(396),
+var _require = __nested_webpack_require_2041478__(396),
     getHighWaterMark = _require.getHighWaterMark;
 
-var _require$codes = __nested_webpack_require_2041341__(4100)/* .codes */ .q,
+var _require$codes = __nested_webpack_require_2041478__(4100)/* .codes */ .q,
     ERR_INVALID_ARG_TYPE = _require$codes.ERR_INVALID_ARG_TYPE,
     ERR_METHOD_NOT_IMPLEMENTED = _require$codes.ERR_METHOD_NOT_IMPLEMENTED,
     ERR_MULTIPLE_CALLBACK = _require$codes.ERR_MULTIPLE_CALLBACK,
@@ -61791,12 +61795,12 @@ var _require$codes = __nested_webpack_require_2041341__(4100)/* .codes */ .q,
 
 var errorOrDestroy = destroyImpl.errorOrDestroy;
 
-__nested_webpack_require_2041341__(4124)(Writable, Stream);
+__nested_webpack_require_2041478__(4124)(Writable, Stream);
 
 function nop() {}
 
 function WritableState(options, stream, isDuplex) {
-  Duplex = Duplex || __nested_webpack_require_2041341__(11);
+  Duplex = Duplex || __nested_webpack_require_2041478__(11);
   options = options || {}; // Duplex streams are both readable and writable, but share
   // the same options object.
   // However, some cases require setting options to different
@@ -61922,7 +61926,7 @@ if (typeof Symbol === 'function' && Symbol.hasInstance && typeof Function.protot
 }
 
 function Writable(options) {
-  Duplex = Duplex || __nested_webpack_require_2041341__(11); // Writable ctor is applied to Duplexes, too.
+  Duplex = Duplex || __nested_webpack_require_2041478__(11); // Writable ctor is applied to Duplexes, too.
   // `realHasInstance` is necessary because using plain `instanceof`
   // would return false, as no `_writableState` property is attached.
   // Trying to use the custom `instanceof` for Writable here will also break the
@@ -62394,7 +62398,7 @@ Writable.prototype._destroy = function (err, cb) {
 /***/ }),
 
 /***/ 5720:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2063243__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2063380__) => {
 
 "use strict";
 
@@ -62403,7 +62407,7 @@ var _Object$setPrototypeO;
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-var finished = __nested_webpack_require_2063243__(7850);
+var finished = __nested_webpack_require_2063380__(7850);
 
 var kLastResolve = Symbol('lastResolve');
 var kLastReject = Symbol('lastReject');
@@ -62608,7 +62612,7 @@ module.exports = createReadableStreamAsyncIterator;
 /***/ }),
 
 /***/ 2155:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2069294__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2069431__) => {
 
 "use strict";
 
@@ -62625,10 +62629,10 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
-var _require = __nested_webpack_require_2069294__(4293),
+var _require = __nested_webpack_require_2069431__(4293),
     Buffer = _require.Buffer;
 
-var _require2 = __nested_webpack_require_2069294__(1669),
+var _require2 = __nested_webpack_require_2069431__(1669),
     inspect = _require2.inspect;
 
 var custom = inspect && inspect.custom || 'inspect';
@@ -62937,14 +62941,14 @@ module.exports = {
 /***/ }),
 
 /***/ 7850:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2078907__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2079044__) => {
 
 "use strict";
 // Ported from https://github.com/mafintosh/end-of-stream with
 // permission from the author, Mathias Buus (@mafintosh).
 
 
-var ERR_STREAM_PREMATURE_CLOSE = __nested_webpack_require_2078907__(4100)/* .codes.ERR_STREAM_PREMATURE_CLOSE */ .q.ERR_STREAM_PREMATURE_CLOSE;
+var ERR_STREAM_PREMATURE_CLOSE = __nested_webpack_require_2079044__(4100)/* .codes.ERR_STREAM_PREMATURE_CLOSE */ .q.ERR_STREAM_PREMATURE_CLOSE;
 
 function once(callback) {
   var called = false;
@@ -63048,7 +63052,7 @@ module.exports = eos;
 /***/ }),
 
 /***/ 1935:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2082139__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2082276__) => {
 
 "use strict";
 
@@ -63063,7 +63067,7 @@ function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { va
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-var ERR_INVALID_ARG_TYPE = __nested_webpack_require_2082139__(4100)/* .codes.ERR_INVALID_ARG_TYPE */ .q.ERR_INVALID_ARG_TYPE;
+var ERR_INVALID_ARG_TYPE = __nested_webpack_require_2082276__(4100)/* .codes.ERR_INVALID_ARG_TYPE */ .q.ERR_INVALID_ARG_TYPE;
 
 function from(Readable, iterable, opts) {
   var iterator;
@@ -63119,7 +63123,7 @@ module.exports = from;
 /***/ }),
 
 /***/ 2916:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2085400__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2085537__) => {
 
 "use strict";
 // Ported from https://github.com/mafintosh/pump with
@@ -63137,7 +63141,7 @@ function once(callback) {
   };
 }
 
-var _require$codes = __nested_webpack_require_2085400__(4100)/* .codes */ .q,
+var _require$codes = __nested_webpack_require_2085537__(4100)/* .codes */ .q,
     ERR_MISSING_ARGS = _require$codes.ERR_MISSING_ARGS,
     ERR_STREAM_DESTROYED = _require$codes.ERR_STREAM_DESTROYED;
 
@@ -63156,7 +63160,7 @@ function destroyer(stream, reading, writing, callback) {
   stream.on('close', function () {
     closed = true;
   });
-  if (eos === undefined) eos = __nested_webpack_require_2085400__(7850);
+  if (eos === undefined) eos = __nested_webpack_require_2085537__(7850);
   eos(stream, {
     readable: reading,
     writable: writing
@@ -63223,12 +63227,12 @@ module.exports = pipeline;
 /***/ }),
 
 /***/ 396:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2087929__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2088066__) => {
 
 "use strict";
 
 
-var ERR_INVALID_OPT_VALUE = __nested_webpack_require_2087929__(4100)/* .codes.ERR_INVALID_OPT_VALUE */ .q.ERR_INVALID_OPT_VALUE;
+var ERR_INVALID_OPT_VALUE = __nested_webpack_require_2088066__(4100)/* .codes.ERR_INVALID_OPT_VALUE */ .q.ERR_INVALID_OPT_VALUE;
 
 function highWaterMarkFrom(options, isDuplex, duplexKey) {
   return options.highWaterMark != null ? options.highWaterMark : isDuplex ? options[duplexKey] : null;
@@ -63257,49 +63261,49 @@ module.exports = {
 /***/ }),
 
 /***/ 4727:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2088803__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2088940__) => {
 
-module.exports = __nested_webpack_require_2088803__(2413);
+module.exports = __nested_webpack_require_2088940__(2413);
 
 
 /***/ }),
 
 /***/ 9822:
-/***/ ((module, exports, __nested_webpack_require_2088924__) => {
+/***/ ((module, exports, __nested_webpack_require_2089061__) => {
 
-var Stream = __nested_webpack_require_2088924__(2413);
+var Stream = __nested_webpack_require_2089061__(2413);
 if (process.env.READABLE_STREAM === 'disable' && Stream) {
   module.exports = Stream.Readable;
   Object.assign(module.exports, Stream);
   module.exports.Stream = Stream;
 } else {
-  exports = module.exports = __nested_webpack_require_2088924__(3588);
+  exports = module.exports = __nested_webpack_require_2089061__(3588);
   exports.Stream = Stream || exports;
   exports.Readable = exports;
-  exports.Writable = __nested_webpack_require_2088924__(8946);
-  exports.Duplex = __nested_webpack_require_2088924__(11);
-  exports.Transform = __nested_webpack_require_2088924__(4472);
-  exports.PassThrough = __nested_webpack_require_2088924__(3392);
-  exports.finished = __nested_webpack_require_2088924__(7850);
-  exports.pipeline = __nested_webpack_require_2088924__(2916);
+  exports.Writable = __nested_webpack_require_2089061__(8946);
+  exports.Duplex = __nested_webpack_require_2089061__(11);
+  exports.Transform = __nested_webpack_require_2089061__(4472);
+  exports.PassThrough = __nested_webpack_require_2089061__(3392);
+  exports.finished = __nested_webpack_require_2089061__(7850);
+  exports.pipeline = __nested_webpack_require_2089061__(2916);
 }
 
 
 /***/ }),
 
 /***/ 4930:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2089651__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2089788__) => {
 
-var constants = __nested_webpack_require_2089651__(3186)
-var eos = __nested_webpack_require_2089651__(1205)
-var inherits = __nested_webpack_require_2089651__(4124)
+var constants = __nested_webpack_require_2089788__(3186)
+var eos = __nested_webpack_require_2089788__(1205)
+var inherits = __nested_webpack_require_2089788__(4124)
 var alloc = Buffer.alloc
 
-var Readable = __nested_webpack_require_2089651__(9822).Readable
-var Writable = __nested_webpack_require_2089651__(9822).Writable
-var StringDecoder = __nested_webpack_require_2089651__(4304).StringDecoder
+var Readable = __nested_webpack_require_2089788__(9822).Readable
+var Writable = __nested_webpack_require_2089788__(9822).Writable
+var StringDecoder = __nested_webpack_require_2089788__(4304).StringDecoder
 
-var headers = __nested_webpack_require_2089651__(8860)
+var headers = __nested_webpack_require_2089788__(8860)
 
 var DMODE = parseInt('755', 8)
 var FMODE = parseInt('644', 8)
@@ -63550,9 +63554,9 @@ module.exports = Pack
 /***/ }),
 
 /***/ 421:
-/***/ ((module, exports, __nested_webpack_require_2095365__) => {
+/***/ ((module, exports, __nested_webpack_require_2095502__) => {
 
-var Stream = __nested_webpack_require_2095365__(2413)
+var Stream = __nested_webpack_require_2095502__(2413)
 
 // through
 //
@@ -63665,11 +63669,11 @@ function through (write, end, opts) {
 /***/ }),
 
 /***/ 3467:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2098086__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2098223__) => {
 
-var through = __nested_webpack_require_2098086__(421);
-var bz2 = __nested_webpack_require_2098086__(2589);
-var bitIterator = __nested_webpack_require_2098086__(7877);
+var through = __nested_webpack_require_2098223__(421);
+var bz2 = __nested_webpack_require_2098223__(2589);
+var bitIterator = __nested_webpack_require_2098223__(7877);
 
 module.exports = unbzip2Stream;
 
@@ -64183,14 +64187,14 @@ module.exports = bzip2;
 /***/ }),
 
 /***/ 5278:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2115552__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2115689__) => {
 
 
 /**
  * For Node.js, simply re-export the core `util.deprecate` function.
  */
 
-module.exports = __nested_webpack_require_2115552__(1669).deprecate;
+module.exports = __nested_webpack_require_2115689__(1669).deprecate;
 
 
 /***/ }),
@@ -64236,17 +64240,17 @@ function wrappy (fn, cb) {
 /***/ }),
 
 /***/ 8867:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2116731__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2116868__) => {
 
 "use strict";
 
 
-const WebSocket = __nested_webpack_require_2116731__(1518);
+const WebSocket = __nested_webpack_require_2116868__(1518);
 
-WebSocket.createWebSocketStream = __nested_webpack_require_2116731__(1658);
-WebSocket.Server = __nested_webpack_require_2116731__(8887);
-WebSocket.Receiver = __nested_webpack_require_2116731__(5066);
-WebSocket.Sender = __nested_webpack_require_2116731__(6947);
+WebSocket.createWebSocketStream = __nested_webpack_require_2116868__(1658);
+WebSocket.Server = __nested_webpack_require_2116868__(8887);
+WebSocket.Receiver = __nested_webpack_require_2116868__(5066);
+WebSocket.Sender = __nested_webpack_require_2116868__(6947);
 
 module.exports = WebSocket;
 
@@ -64254,12 +64258,12 @@ module.exports = WebSocket;
 /***/ }),
 
 /***/ 9436:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2117117__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2117254__) => {
 
 "use strict";
 
 
-const { EMPTY_BUFFER } = __nested_webpack_require_2117117__(5949);
+const { EMPTY_BUFFER } = __nested_webpack_require_2117254__(5949);
 
 /**
  * Merges an array of buffers into a new buffer.
@@ -64361,7 +64365,7 @@ function toBuffer(data) {
 }
 
 try {
-  const bufferUtil = __nested_webpack_require_2117117__(1269);
+  const bufferUtil = __nested_webpack_require_2117254__(1269);
   const bu = bufferUtil.BufferUtil || bufferUtil;
 
   module.exports = {
@@ -64895,16 +64899,16 @@ module.exports = Limiter;
 /***/ }),
 
 /***/ 6684:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2133036__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2133173__) => {
 
 "use strict";
 
 
-const zlib = __nested_webpack_require_2133036__(8761);
+const zlib = __nested_webpack_require_2133173__(8761);
 
-const bufferUtil = __nested_webpack_require_2133036__(9436);
-const Limiter = __nested_webpack_require_2133036__(1356);
-const { kStatusCode, NOOP } = __nested_webpack_require_2133036__(5949);
+const bufferUtil = __nested_webpack_require_2133173__(9436);
+const Limiter = __nested_webpack_require_2133173__(1356);
+const { kStatusCode, NOOP } = __nested_webpack_require_2133173__(5949);
 
 const TRAILER = Buffer.from([0x00, 0x00, 0xff, 0xff]);
 const kPerMessageDeflate = Symbol('permessage-deflate');
@@ -65417,22 +65421,22 @@ function inflateOnError(err) {
 /***/ }),
 
 /***/ 5066:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2147354__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2147491__) => {
 
 "use strict";
 
 
-const { Writable } = __nested_webpack_require_2147354__(2413);
+const { Writable } = __nested_webpack_require_2147491__(2413);
 
-const PerMessageDeflate = __nested_webpack_require_2147354__(6684);
+const PerMessageDeflate = __nested_webpack_require_2147491__(6684);
 const {
   BINARY_TYPES,
   EMPTY_BUFFER,
   kStatusCode,
   kWebSocket
-} = __nested_webpack_require_2147354__(5949);
-const { concat, toArrayBuffer, unmask } = __nested_webpack_require_2147354__(9436);
-const { isValidStatusCode, isValidUTF8 } = __nested_webpack_require_2147354__(6279);
+} = __nested_webpack_require_2147491__(5949);
+const { concat, toArrayBuffer, unmask } = __nested_webpack_require_2147491__(9436);
+const { isValidStatusCode, isValidUTF8 } = __nested_webpack_require_2147491__(6279);
 
 const GET_INFO = 0;
 const GET_PAYLOAD_LENGTH_16 = 1;
@@ -65932,17 +65936,17 @@ function error(ErrorCtor, message, prefix, statusCode) {
 /***/ }),
 
 /***/ 6947:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2159888__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2160025__) => {
 
 "use strict";
 
 
-const { randomFillSync } = __nested_webpack_require_2159888__(6417);
+const { randomFillSync } = __nested_webpack_require_2160025__(6417);
 
-const PerMessageDeflate = __nested_webpack_require_2159888__(6684);
-const { EMPTY_BUFFER } = __nested_webpack_require_2159888__(5949);
-const { isValidStatusCode } = __nested_webpack_require_2159888__(6279);
-const { mask: applyMask, toBuffer } = __nested_webpack_require_2159888__(9436);
+const PerMessageDeflate = __nested_webpack_require_2160025__(6684);
+const { EMPTY_BUFFER } = __nested_webpack_require_2160025__(5949);
+const { isValidStatusCode } = __nested_webpack_require_2160025__(6279);
+const { mask: applyMask, toBuffer } = __nested_webpack_require_2160025__(9436);
 
 const mask = Buffer.alloc(4);
 
@@ -66345,12 +66349,12 @@ module.exports = Sender;
 /***/ }),
 
 /***/ 1658:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2170670__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2170807__) => {
 
 "use strict";
 
 
-const { Duplex } = __nested_webpack_require_2170670__(2413);
+const { Duplex } = __nested_webpack_require_2170807__(2413);
 
 /**
  * Emits the `'close'` event on a stream.
@@ -66518,13 +66522,13 @@ module.exports = createWebSocketStream;
 /***/ }),
 
 /***/ 6279:
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_2174711__) => {
+/***/ ((__unused_webpack_module, exports, __nested_webpack_require_2174848__) => {
 
 "use strict";
 
 
 try {
-  const isValidUTF8 = __nested_webpack_require_2174711__(4592);
+  const isValidUTF8 = __nested_webpack_require_2174848__(4592);
 
   exports.isValidUTF8 =
     typeof isValidUTF8 === 'object'
@@ -66556,19 +66560,19 @@ exports.isValidStatusCode = (code) => {
 /***/ }),
 
 /***/ 8887:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2175501__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2175638__) => {
 
 "use strict";
 
 
-const EventEmitter = __nested_webpack_require_2175501__(8614);
-const { createHash } = __nested_webpack_require_2175501__(6417);
-const { createServer, STATUS_CODES } = __nested_webpack_require_2175501__(8605);
+const EventEmitter = __nested_webpack_require_2175638__(8614);
+const { createHash } = __nested_webpack_require_2175638__(6417);
+const { createServer, STATUS_CODES } = __nested_webpack_require_2175638__(8605);
 
-const PerMessageDeflate = __nested_webpack_require_2175501__(6684);
-const WebSocket = __nested_webpack_require_2175501__(1518);
-const { format, parse } = __nested_webpack_require_2175501__(2035);
-const { GUID, kWebSocket } = __nested_webpack_require_2175501__(5949);
+const PerMessageDeflate = __nested_webpack_require_2175638__(6684);
+const WebSocket = __nested_webpack_require_2175638__(1518);
+const { format, parse } = __nested_webpack_require_2175638__(2035);
+const { GUID, kWebSocket } = __nested_webpack_require_2175638__(5949);
 
 const keyRegex = /^[+/0-9A-Za-z]{22}==$/;
 
@@ -66970,22 +66974,22 @@ function abortHandshake(socket, code, message, headers) {
 /***/ }),
 
 /***/ 1518:
-/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2187115__) => {
+/***/ ((module, __unused_webpack_exports, __nested_webpack_require_2187252__) => {
 
 "use strict";
 
 
-const EventEmitter = __nested_webpack_require_2187115__(8614);
-const https = __nested_webpack_require_2187115__(7211);
-const http = __nested_webpack_require_2187115__(8605);
-const net = __nested_webpack_require_2187115__(1631);
-const tls = __nested_webpack_require_2187115__(4016);
-const { randomBytes, createHash } = __nested_webpack_require_2187115__(6417);
-const { URL } = __nested_webpack_require_2187115__(8835);
+const EventEmitter = __nested_webpack_require_2187252__(8614);
+const https = __nested_webpack_require_2187252__(7211);
+const http = __nested_webpack_require_2187252__(8605);
+const net = __nested_webpack_require_2187252__(1631);
+const tls = __nested_webpack_require_2187252__(4016);
+const { randomBytes, createHash } = __nested_webpack_require_2187252__(6417);
+const { URL } = __nested_webpack_require_2187252__(8835);
 
-const PerMessageDeflate = __nested_webpack_require_2187115__(6684);
-const Receiver = __nested_webpack_require_2187115__(5066);
-const Sender = __nested_webpack_require_2187115__(6947);
+const PerMessageDeflate = __nested_webpack_require_2187252__(6684);
+const Receiver = __nested_webpack_require_2187252__(5066);
+const Sender = __nested_webpack_require_2187252__(6947);
 const {
   BINARY_TYPES,
   EMPTY_BUFFER,
@@ -66993,10 +66997,10 @@ const {
   kStatusCode,
   kWebSocket,
   NOOP
-} = __nested_webpack_require_2187115__(5949);
-const { addEventListener, removeEventListener } = __nested_webpack_require_2187115__(4561);
-const { format, parse } = __nested_webpack_require_2187115__(2035);
-const { toBuffer } = __nested_webpack_require_2187115__(9436);
+} = __nested_webpack_require_2187252__(5949);
+const { addEventListener, removeEventListener } = __nested_webpack_require_2187252__(4561);
+const { format, parse } = __nested_webpack_require_2187252__(2035);
+const { toBuffer } = __nested_webpack_require_2187252__(9436);
 
 const readyStates = ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'];
 const protocolVersions = [8, 13];
@@ -67911,17 +67915,17 @@ function socketOnError() {
 /***/ }),
 
 /***/ 8781:
-/***/ ((__unused_webpack_module, exports, __nested_webpack_require_2212115__) => {
+/***/ ((__unused_webpack_module, exports, __nested_webpack_require_2212252__) => {
 
-var fs = __nested_webpack_require_2212115__(5747);
-var zlib = __nested_webpack_require_2212115__(8761);
-var fd_slicer = __nested_webpack_require_2212115__(5010);
-var crc32 = __nested_webpack_require_2212115__(4794);
-var util = __nested_webpack_require_2212115__(1669);
-var EventEmitter = __nested_webpack_require_2212115__(8614).EventEmitter;
-var Transform = __nested_webpack_require_2212115__(2413).Transform;
-var PassThrough = __nested_webpack_require_2212115__(2413).PassThrough;
-var Writable = __nested_webpack_require_2212115__(2413).Writable;
+var fs = __nested_webpack_require_2212252__(5747);
+var zlib = __nested_webpack_require_2212252__(8761);
+var fd_slicer = __nested_webpack_require_2212252__(5010);
+var crc32 = __nested_webpack_require_2212252__(4794);
+var util = __nested_webpack_require_2212252__(1669);
+var EventEmitter = __nested_webpack_require_2212252__(8614).EventEmitter;
+var Transform = __nested_webpack_require_2212252__(2413).Transform;
+var PassThrough = __nested_webpack_require_2212252__(2413).PassThrough;
+var Writable = __nested_webpack_require_2212252__(2413).Writable;
 
 exports.open = open;
 exports.fromFd = fromFd;
@@ -68714,7 +68718,7 @@ function defaultCallback(err) {
 /***/ }),
 
 /***/ 7835:
-/***/ (function(__unused_webpack_module, exports, __nested_webpack_require_2245105__) {
+/***/ (function(__unused_webpack_module, exports, __nested_webpack_require_2245242__) {
 
 "use strict";
 
@@ -68722,7 +68726,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const react_1 = __importDefault(__nested_webpack_require_2245105__(8444));
+const react_1 = __importDefault(__nested_webpack_require_2245242__(8444));
 const months = [
     "January",
     "February",
@@ -68764,7 +68768,7 @@ exports.default = DailyLog;
 /***/ }),
 
 /***/ 6144:
-/***/ (function(__unused_webpack_module, exports, __nested_webpack_require_2246732__) {
+/***/ (function(__unused_webpack_module, exports, __nested_webpack_require_2246869__) {
 
 "use strict";
 
@@ -68793,14 +68797,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = exports.processSiteData = exports.renderHtmlFromPage = exports.defaultConfig = void 0;
-const path_1 = __importDefault(__nested_webpack_require_2246732__(5622));
-const fs_1 = __importDefault(__nested_webpack_require_2246732__(5747));
-const chrome_aws_lambda_1 = __importDefault(__nested_webpack_require_2246732__(8830));
-const roam_marked_1 = __nested_webpack_require_2246732__(8480);
-const roam_client_1 = __nested_webpack_require_2246732__(5016);
-const react_1 = __importDefault(__nested_webpack_require_2246732__(8444));
-const server_1 = __importDefault(__nested_webpack_require_2246732__(7262));
-const DailyLog_1 = __importDefault(__nested_webpack_require_2246732__(7835));
+const path_1 = __importDefault(__nested_webpack_require_2246869__(5622));
+const fs_1 = __importDefault(__nested_webpack_require_2246869__(5747));
+const chrome_aws_lambda_1 = __importDefault(__nested_webpack_require_2246869__(8830));
+const roam_marked_1 = __nested_webpack_require_2246869__(8480);
+const roam_client_1 = __nested_webpack_require_2246869__(5016);
+const react_1 = __importDefault(__nested_webpack_require_2246869__(8444));
+const server_1 = __importDefault(__nested_webpack_require_2246869__(7262));
+const DailyLog_1 = __importDefault(__nested_webpack_require_2246869__(7835));
 const CONFIG_PAGE_NAMES = ["roam/js/static-site", "roam/js/public-garden"];
 const IGNORE_BLOCKS = CONFIG_PAGE_NAMES.map((c) => `${c}/ignore`);
 const TITLE_REGEX = new RegExp(`(?:${CONFIG_PAGE_NAMES.map((c) => `${c.replace("/", "\\/")}/title`).join("|")})::(.*)`);
@@ -68994,8 +68998,8 @@ const convertContentToHtml = ({ content, viewType, level, context, }) => {
         return "";
     }
     const items = content.map((t) => {
-        const componentsWithChildren = (s) => {
-            const parent = context.components(s);
+        const componentsWithChildren = (s, ac) => {
+            const parent = context.components(s, ac);
             if (parent) {
                 return parent;
             }
@@ -69008,7 +69012,7 @@ const convertContentToHtml = ({ content, viewType, level, context, }) => {
                     .join("")}</tr>`)
                     .join("")}</tbody></table>`;
             }
-            return "";
+            return false;
         };
         const classlist = [];
         const textToParse = t.text.replace(/#\.([^\s]*)/g, (_, className) => {
@@ -69050,11 +69054,10 @@ const renderHtmlFromPage = ({ outputPath, pageContent, p, config, pageNames, blo
         level: 0,
         context: {
             pagesToHrefs,
-            components: (s) => {
-                var _a, _b, _c, _d;
-                const staticSiteComponent = (_a = /static site:(.*)/i.exec(s)) === null || _a === void 0 ? void 0 : _a[1];
-                if (staticSiteComponent) {
-                    if (/daily log/i.test(staticSiteComponent)) {
+            components: (s, ac) => {
+                var _a, _b, _c;
+                if (/static site/i.test(s)) {
+                    if (ac && /daily log/i.test(ac)) {
                         const referenceContent = references
                             .filter(({ title }) => DAILY_NOTE_PAGE_REGEX.test(title))
                             .sort(({ title: a }, { title: b }) => roam_client_1.parseRoamDate(b).valueOf() - roam_client_1.parseRoamDate(a).valueOf())
@@ -69063,7 +69066,7 @@ const renderHtmlFromPage = ({ outputPath, pageContent, p, config, pageNames, blo
                             content: referenceContent,
                         });
                         const firstNode = preparedReferenceContent[0];
-                        const firstDate = roam_client_1.parseRoamDate(((_d = (_c = (_b = firstNode === null || firstNode === void 0 ? void 0 : firstNode.text) === null || _b === void 0 ? void 0 : _b.match) === null || _c === void 0 ? void 0 : _c.call(_b, DAILY_NOTE_PAGE_REGEX)) === null || _d === void 0 ? void 0 : _d[0]) || "");
+                        const firstDate = roam_client_1.parseRoamDate(((_c = (_b = (_a = firstNode === null || firstNode === void 0 ? void 0 : firstNode.text) === null || _a === void 0 ? void 0 : _a.match) === null || _b === void 0 ? void 0 : _b.call(_a, DAILY_NOTE_PAGE_REGEX)) === null || _c === void 0 ? void 0 : _c[0]) || "");
                         const allContent = preparedReferenceContent.slice(1).reduce((prev, cur) => {
                             var _a;
                             const lastNode = prev[prev.length - 1];
@@ -69597,7 +69600,7 @@ module.exports = __webpack_require__(761);;
 /******/ 	var __webpack_module_cache__ = {};
 /******/ 	
 /******/ 	// The require function
-/******/ 	function __nested_webpack_require_2280649__(moduleId) {
+/******/ 	function __nested_webpack_require_2280666__(moduleId) {
 /******/ 		// Check if module is in cache
 /******/ 		if(__webpack_module_cache__[moduleId]) {
 /******/ 			return __webpack_module_cache__[moduleId].exports;
@@ -69612,7 +69615,7 @@ module.exports = __webpack_require__(761);;
 /******/ 		// Execute the module function
 /******/ 		var threw = true;
 /******/ 		try {
-/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_2280649__);
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_2280666__);
 /******/ 			threw = false;
 /******/ 		} finally {
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
@@ -69625,11 +69628,11 @@ module.exports = __webpack_require__(761);;
 /************************************************************************/
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
-/******/ 	__nested_webpack_require_2280649__.ab = __dirname + "/";/************************************************************************/
+/******/ 	__nested_webpack_require_2280666__.ab = __dirname + "/";/************************************************************************/
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nested_webpack_require_2280649__(6144);
+/******/ 	return __nested_webpack_require_2280666__(6144);
 /******/ })()
 ;
 
