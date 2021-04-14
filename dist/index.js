@@ -69126,10 +69126,10 @@ const renderHtmlFromPage = ({ outputPath, pageContent, p, config, pageNames, blo
         .replace(/\${PAGE_NAME}/g, title)
         .replace(/\${PAGE_DESCRIPTION}/g, description)
         .replace(/\${PAGE_CONTENT}/g, markedContent)
-        .replace(/\${REFERENCES}/g, references
-        .filter((r) => pageNameSet.has(r.title))
-        .map((r) => config.referenceTemplate.replace(/\${REFERENCE}/g, r.title).replace(/\${LINK}/g, convertPageNameToPath({
-        name: r.title,
+        .replace(/\${REFERENCES}/g, Array.from(new Set(references.map((r) => r.title)))
+        .filter((r) => pageNameSet.has(r))
+        .map((r) => config.referenceTemplate.replace(/\${REFERENCE}/g, r).replace(/\${LINK}/g, convertPageNameToPath({
+        name: r,
         index: config.index,
     })))
         .join("\n"));
@@ -69600,7 +69600,7 @@ module.exports = __webpack_require__(761);;
 /******/ 	var __webpack_module_cache__ = {};
 /******/ 	
 /******/ 	// The require function
-/******/ 	function __nested_webpack_require_2280666__(moduleId) {
+/******/ 	function __nested_webpack_require_2280689__(moduleId) {
 /******/ 		// Check if module is in cache
 /******/ 		if(__webpack_module_cache__[moduleId]) {
 /******/ 			return __webpack_module_cache__[moduleId].exports;
@@ -69615,7 +69615,7 @@ module.exports = __webpack_require__(761);;
 /******/ 		// Execute the module function
 /******/ 		var threw = true;
 /******/ 		try {
-/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_2280666__);
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_2280689__);
 /******/ 			threw = false;
 /******/ 		} finally {
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
@@ -69628,11 +69628,11 @@ module.exports = __webpack_require__(761);;
 /************************************************************************/
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
-/******/ 	__nested_webpack_require_2280666__.ab = __dirname + "/";/************************************************************************/
+/******/ 	__nested_webpack_require_2280689__.ab = __dirname + "/";/************************************************************************/
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nested_webpack_require_2280666__(6144);
+/******/ 	return __nested_webpack_require_2280689__(6144);
 /******/ })()
 ;
 
