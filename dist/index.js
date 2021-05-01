@@ -93587,6 +93587,7 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
                     .map((b) => b[0]);
             });
             yield page.evaluate(() => {
+                window.gatherBlockReferences = true;
                 window.getTreeByBlockId = (blockId) => {
                     var _a;
                     const block = window.roamAlphaAPI.pull("[:block/children, :block/string, :block/order, :block/uid, :block/heading, :block/open, :children/view-type]", blockId);
@@ -93602,7 +93603,7 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
                         heading: block[":block/heading"] || 0,
                         open: block[":block/open"] || true,
                         viewType: (_a = block[":children/view-type"]) === null || _a === void 0 ? void 0 : _a.substring(1),
-                        references: uid
+                        references: uid && window.gatherBlockReferences
                             ? window.roamAlphaAPI
                                 .q(`[:find ?u ?t :where [?p :node/title ?t] [?r :block/page ?p] [?r :block/uid ?u] [?r :block/refs ?b] [?b :block/uid "${uid}"]]`)
                                 .map(([uid, title]) => ({ uid, title }))
@@ -93638,6 +93639,11 @@ const run = ({ roamUsername, roamPassword, roamGraph, logger = { info: console.l
                 : [];
             const userConfig = getConfigFromPage(configPageTree);
             const config = Object.assign(Object.assign(Object.assign({}, exports.defaultConfig), userConfig), inputConfig);
+            if (!config.plugins["inline-block-references"]) {
+                yield page.evaluate(() => {
+                    window.gatherBlockReferences = false;
+                });
+            }
             const titleFilters = config.filter.length
                 ? config.filter.map(getTitleRuleFromNode).filter((f) => !!f)
                 : [() => false];
@@ -93967,7 +93973,7 @@ module.exports = __webpack_require__(761);;
 /******/ 	var __webpack_module_cache__ = {};
 /******/ 	
 /******/ 	// The require function
-/******/ 	function __nested_webpack_require_3209637__(moduleId) {
+/******/ 	function __nested_webpack_require_3209920__(moduleId) {
 /******/ 		// Check if module is in cache
 /******/ 		if(__webpack_module_cache__[moduleId]) {
 /******/ 			return __webpack_module_cache__[moduleId].exports;
@@ -93982,7 +93988,7 @@ module.exports = __webpack_require__(761);;
 /******/ 		// Execute the module function
 /******/ 		var threw = true;
 /******/ 		try {
-/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_3209637__);
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_3209920__);
 /******/ 			threw = false;
 /******/ 		} finally {
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
@@ -93995,11 +94001,11 @@ module.exports = __webpack_require__(761);;
 /************************************************************************/
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
-/******/ 	__nested_webpack_require_3209637__.ab = __dirname + "/";/************************************************************************/
+/******/ 	__nested_webpack_require_3209920__.ab = __dirname + "/";/************************************************************************/
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nested_webpack_require_3209637__(6144);
+/******/ 	return __nested_webpack_require_3209920__(6144);
 /******/ })()
 ;
 

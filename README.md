@@ -23,7 +23,7 @@ A GitHub action for generating a static site from a Roam Graph. This action is a
 ## Usage
 
 ```yaml
-uses: dvargas92495/generate-roam-site-action@2.8.1
+uses: dvargas92495/generate-roam-site-action@2.8.3
 with:
     roam_username: dvargas92495@gmail.com
     roam_password: ${{ secrets.ROAM_PASSWORD }}
