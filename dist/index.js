@@ -93422,7 +93422,7 @@ const renderHtmlFromPage = ({ outputPath, pageContent, p, config, pageNames, blo
                 if (/static site/i.test(s)) {
                     if (ac && /daily log/i.test(ac)) {
                         const referenceContent = references
-                            .filter(({ title }) => DAILY_NOTE_PAGE_REGEX.test(title))
+                            .filter(({ title, node: { children = [] } }) => DAILY_NOTE_PAGE_REGEX.test(title) && children.length)
                             .sort(({ title: a }, { title: b }) => roam_client_1.parseRoamDate(b).valueOf() - roam_client_1.parseRoamDate(a).valueOf())
                             .map(({ node, title }) => (Object.assign(Object.assign({}, node), { text: node.text.replace(p, title) })));
                         const preparedReferenceContent = prepareContent({
